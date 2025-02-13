@@ -2,22 +2,33 @@
 
 namespace App\Models;
 
+use App\Models\Traits\HasSlug;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Movie extends Model
 {
+    use HasFactory, HasSlug;
+
     protected $fillable = [
         'title',
         'description',
+        'slug',
         'release_date',
         'runtime',
         'poster_path',
         'backdrop_path',
-        'rating_api',
-        'rating_user',
+        'video_path',
+        'api_rating',
+        'user_rating',
         'director_id',
+    ];
+
+    protected $casts = [
+        'release_date' => 'date',
     ];
 
     /**
@@ -41,15 +52,12 @@ class Movie extends Model
      */
     public function genres(): BelongsToMany
     {
-        return $this->belongsToMany(Genre::class, 'genre_movie');
+        return $this->belongsToMany(Genre::class, 'movie_genre');
     }
 
-    /**
-     * Зв'язок з таблицею Category (багато до багатьох).
-     */
-    public function categories(): BelongsToMany
+    public function comments(): MorphMany
     {
-        return $this->belongsToMany(Category::class, 'category_movie');
+        return $this->morphMany(Comment::class, 'commentable');
     }
 }
 

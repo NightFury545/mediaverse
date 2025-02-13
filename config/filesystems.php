@@ -30,7 +30,7 @@ return [
 
     'disks' => [
 
-        'local' => [
+       'local' => [
             'driver' => 'local',
             'root' => storage_path('app/private'),
             'serve' => true,
@@ -41,6 +41,7 @@ return [
         'private' => [
             'driver' => 'local',
             'root' => storage_path('app/private'),
+            'visibility' => 'private',
             'serve' => true,
             'throw' => false,
             'report' => false,

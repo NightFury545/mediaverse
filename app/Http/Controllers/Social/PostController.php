@@ -8,19 +8,31 @@ use App\Http\Requests\Social\Post\UpdatePostRequest;
 use App\Models\Post;
 use App\Services\Social\PostService;
 use Exception;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 
 class PostController extends Controller
 {
     use AuthorizesRequests;
 
+    /**
+     * Constructor to initialize PostService.
+     *
+     * @param PostService $postService
+     */
     public function __construct(protected PostService $postService)
     {
     }
 
+    /**
+     * Store a new post.
+     *
+     * @param CreatePostRequest $request
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
     public function store(CreatePostRequest $request): JsonResponse
     {
         $this->authorize('create', Post::class);
@@ -33,39 +45,47 @@ class PostController extends Controller
                 'data' => $post,
             ], 201);
         } catch (Exception $e) {
-            Log::error('Error creating post: ' . $e->getMessage());
-
             return response()->json([
-                'message' => 'Failed to create post.',
-                'error' => $e->getMessage(),
+                'error' => 'Failed to create post: ' . $e->getMessage(),
             ], 500);
         }
     }
 
+    /**
+     * Show a specific post.
+     *
+     * @param string $identifier
+     * @return JsonResponse
+     */
     public function show(string $identifier): JsonResponse
     {
         try {
             $post = $this->postService->getPost($identifier);
 
             if (!$post) {
-                return response()->json(['message' => 'Post not found.'], 404);
+                return response()->json([
+                    'error' => 'Post not found.',
+                ], 404);
             }
-
-            $this->authorize('view', $post);
 
             return response()->json([
                 'data' => $post,
             ]);
         } catch (Exception $e) {
-            Log::error('Error retrieving post: ' . $e->getMessage());
-
             return response()->json([
-                'message' => 'Failed to retrieve post.',
-                'error' => $e->getMessage(),
+                'error' => 'Failed to retrieve post: ' . $e->getMessage(),
             ], 500);
         }
     }
 
+    /**
+     * Update a specific post.
+     *
+     * @param UpdatePostRequest $request
+     * @param Post $post
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
     public function update(UpdatePostRequest $request, Post $post): JsonResponse
     {
         $this->authorize('update', $post);
@@ -78,15 +98,19 @@ class PostController extends Controller
                 'data' => $updatedPost,
             ]);
         } catch (Exception $e) {
-            Log::error('Error updating post: ' . $e->getMessage());
-
             return response()->json([
-                'message' => 'Failed to update post.',
-                'error' => $e->getMessage(),
+                'error' => 'Failed to update post: ' . $e->getMessage(),
             ], 500);
         }
     }
 
+    /**
+     * Delete a specific post.
+     *
+     * @param Post $post
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
     public function destroy(Post $post): JsonResponse
     {
         $this->authorize('delete', $post);
@@ -98,35 +122,29 @@ class PostController extends Controller
                 'message' => 'Post deleted successfully.',
             ]);
         } catch (Exception $e) {
-            Log::error('Error deleting post: ' . $e->getMessage());
-
             return response()->json([
-                'message' => 'Failed to delete post.',
-                'error' => $e->getMessage(),
+                'error' => 'Failed to delete post: ' . $e->getMessage(),
             ], 500);
         }
     }
 
+    /**
+     * Get a list of posts.
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
     public function index(Request $request): JsonResponse
     {
-        $this->authorize('viewAny', Post::class);
-
         try {
-            $filters = $request->get('filters', []);
-            $sort = $request->get('sort', []);
             $perPage = $request->get('perPage', 20);
 
-            $posts = $this->postService->getPosts($filters, $sort, $perPage);
+            $posts = $this->postService->getPosts($perPage);
 
-            return response()->json([
-                'data' => $posts,
-            ]);
+            return response()->json($posts);
         } catch (Exception $e) {
-            Log::error('Error fetching posts: ' . $e->getMessage());
-
             return response()->json([
-                'message' => 'Failed to fetch posts.',
-                'error' => $e->getMessage(),
+                'error' => 'Failed to fetch posts: ' . $e->getMessage(),
             ], 500);
         }
     }

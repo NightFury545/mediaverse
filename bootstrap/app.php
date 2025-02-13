@@ -1,10 +1,12 @@
 <?php
 
+use App\Exceptions\Handlers\AccessDeniedHttpExceptionHandler;
 use App\Http\Middleware\EmailVerificationMiddleware;
 use App\Http\Middleware\SetLocaleMiddleware;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -21,5 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->append(SetLocaleMiddleware::class);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        $exceptions->render(function (AccessDeniedHttpException $exception) {
+            AccessDeniedHttpExceptionHandler::handle($exception);
+        });
     })->create();

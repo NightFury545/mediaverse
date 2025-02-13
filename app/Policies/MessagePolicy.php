@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\Role;
 use App\Models\Message;
 use App\Models\User;
 use Illuminate\Auth\Access\Response;
@@ -13,7 +14,7 @@ class MessagePolicy
      */
     public function viewAny(User $user): bool
     {
-        return false;
+        return $user->role === Role::ADMIN->value;
     }
 
     /**
@@ -21,7 +22,7 @@ class MessagePolicy
      */
     public function view(User $user, Message $message): bool
     {
-        return false;
+        return true;
     }
 
     /**

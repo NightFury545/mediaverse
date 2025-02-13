@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\Role;
 use App\Models\Like;
 use App\Models\User;
 use Illuminate\Auth\Access\Response;
@@ -13,7 +14,7 @@ class LikePolicy
      */
     public function viewAny(User $user): bool
     {
-        return false;
+        return $user->role === Role::ADMIN->value;
     }
 
     /**
@@ -21,7 +22,7 @@ class LikePolicy
      */
     public function view(User $user, Like $like): bool
     {
-        return false;
+        return $user->id === $like->user()->id;
     }
 
     /**
@@ -29,7 +30,7 @@ class LikePolicy
      */
     public function create(User $user): bool
     {
-        return false;
+        return true;
     }
 
     /**

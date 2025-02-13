@@ -8,38 +8,49 @@ use Illuminate\Support\Str;
 
 class FileService
 {
-    public function savePublicFile(UploadedFile $file, string $folder): string
+    /**
+     * Зберегти файл на вказаному диску.
+     *
+     * @param UploadedFile $file
+     * @param string $folder
+     * @param string $disk
+     * @return string
+     */
+    public function saveFile(UploadedFile $file, string $folder = 'attachments', string $disk = 'public'): string
     {
         $fileName = Str::uuid() . '.' . $file->getClientOriginalExtension();
-        $path = Storage::disk('public')->putFileAs($folder, $file, $fileName);
+        $path = Storage::disk($disk)->putFileAs($folder, $file, $fileName);
 
-        return Storage::url($path);
+        return $disk === 'public' ? Storage::disk($disk)->url($path) : $path;
     }
 
-    public function savePrivateFile(UploadedFile $file, string $folder): string
+    /**
+     * Перемістити файл з одного диска на інший.
+     *
+     * @param string $filePath
+     * @param string $fromDisk
+     * @param string $toDisk
+     * @return string
+     */
+    public function moveFile(string $filePath, string $fromDisk, string $toDisk): string
     {
-        $fileName = Str::uuid() . '.' . $file->getClientOriginalExtension();
-        return Storage::disk('private')->putFileAs($folder, $file, $fileName);
-    }
+        $newPath = $filePath;
 
-    public function moveToPrivate(string $filePath, string $folder): string
-    {
-        $newPath = str_replace('public', 'private', $filePath);
-        Storage::move($filePath, $newPath);
+        Storage::disk($toDisk)->put($newPath, Storage::disk($fromDisk)->get($filePath));
+        Storage::disk($fromDisk)->delete($filePath);
 
         return $newPath;
     }
 
-    public function moveToPublic(string $filePath, string $folder): string
+    /**
+     * Видалити файл з вказаного диска.
+     *
+     * @param string $filePath
+     * @param string $disk
+     * @return void
+     */
+    public function deleteFile(string $filePath, string $disk = 'public'): void
     {
-        $newPath = str_replace('private', 'public', $filePath);
-        Storage::move($filePath, $newPath);
-
-        return $newPath;
-    }
-
-    public function deleteFile(string $filePath): void
-    {
-        Storage::delete($filePath);
+        Storage::disk($disk)->delete($filePath);
     }
 }

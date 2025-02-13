@@ -7,11 +7,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Actor extends Model
 {
-    protected $fillable = ['name'];
+    protected $fillable = ['name', 'birth_date', 'profile_path'];
 
-    /**
-     * Зв'язок з таблицею Movie (багато до багатьох).
-     */
+    protected $casts = [
+        'birth_date' => 'date',
+    ];
+
     public function movies(): BelongsToMany
     {
         return $this->belongsToMany(Movie::class, 'movie_actor');

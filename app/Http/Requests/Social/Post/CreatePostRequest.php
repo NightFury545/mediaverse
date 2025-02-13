@@ -24,6 +24,7 @@ class CreatePostRequest extends FormRequest
             'attachments' => 'nullable|array',
             'attachments.*' => 'file|mimes:jpeg,png,jpg,gif,avi,mp4',
             'visibility' => ['nullable', Rule::in(PostVisibility::getValues())],
+            'comments_enabled' => 'nullable|boolean',
         ];
     }
 }

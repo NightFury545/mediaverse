@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\Role;
 use App\Models\Friendship;
 use App\Models\User;
 use Illuminate\Auth\Access\Response;
@@ -13,7 +14,7 @@ class FriendshipPolicy
      */
     public function viewAny(User $user): bool
     {
-        return false;
+        return $user->role === Role::ADMIN->value;
     }
 
     /**
@@ -21,7 +22,9 @@ class FriendshipPolicy
      */
     public function view(User $user, Friendship $friendship): bool
     {
-        return false;
+        return $user->id === $friendship->user()->id
+            || $user->id === $friendship->friend()->id
+            || $user->role === Role::ADMIN->value;
     }
 
     /**
@@ -29,7 +32,7 @@ class FriendshipPolicy
      */
     public function create(User $user): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -37,7 +40,9 @@ class FriendshipPolicy
      */
     public function update(User $user, Friendship $friendship): bool
     {
-        return false;
+        return $user->id === $friendship->user()->id
+            || $user->id === $friendship->friend()->id
+            || $user->role === Role::ADMIN->value;
     }
 
     /**
@@ -45,6 +50,8 @@ class FriendshipPolicy
      */
     public function delete(User $user, Friendship $friendship): bool
     {
-        return false;
+        return $user->id === $friendship->user()->id
+            || $user->id === $friendship->friend()->id
+            || $user->role === Role::ADMIN->value;
     }
 }
