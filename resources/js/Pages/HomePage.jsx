@@ -1,9 +1,9 @@
 import React from "react";
-import Navbar from "../Components/Navbar.jsx";
+import Navbar from "../Components/Common/Navbar.jsx";
 import { Box, Typography, Card, CardContent, Grid, Container } from "@mui/material";
 import { motion } from "framer-motion";
 
-const Home = () => {
+const HomePage = () => {
     const features = [
         { title: "Фільми", description: "Дивіться найкращі фільми у зручному форматі.", icon: "🎥" },
         { title: "Музика", description: "Слухайте популярну музику у будь-який час.", icon: "🎵" },
@@ -41,7 +41,7 @@ const Home = () => {
                         maxWidth: { xs: "100%", md: "600px" },
                         padding: { xs: 2, md: 4 },
                         textAlign: "left",
-                        order: { xs: 2, md: 1 },
+                        order: { xs: 1, md: 1 },  // На малих екранах текст перший
                         marginTop: { xs: 4, md: 0 },
                         marginRight: { xs: 0, md: 4 },
                     }}
@@ -70,7 +70,7 @@ const Home = () => {
                     </Typography>
                 </Box>
 
-                {/* Права частина */}
+                {/* Права частина зображення */}
                 <Box
                     component={motion.div}
                     initial="hidden"
@@ -79,16 +79,20 @@ const Home = () => {
                     sx={{
                         flex: 1,
                         maxWidth: { xs: "100%", md: "500px" },
-                        mt: { xs: 4, md: 0 },
                         display: "flex",
                         justifyContent: "center",
-                        order: { xs: 1, md: 2 },
+                        order: { xs: 2, md: 2 },  // На малих екранах зображення йде після тексту
+                        marginTop: { xs: 4, md: 0 },  // Додаємо відступ між текстом та зображенням
                     }}
                 >
                     <img
-                        src="https://via.placeholder.com/500x400?text=MediaVerse"
+                        src={`/storage/images/hero.jpg`}
                         alt="MediaVerse"
-                        style={{ maxWidth: "100%", borderRadius: "20px" }}
+                        style={{
+                            maxWidth: "100%",
+                            borderRadius: "20px",
+                            marginTop: "20px",  // Відступ на малих екранах
+                        }}
                     />
                 </Box>
             </Box>
@@ -165,4 +169,4 @@ const Home = () => {
     );
 };
 
-export default Home;
+export default HomePage;

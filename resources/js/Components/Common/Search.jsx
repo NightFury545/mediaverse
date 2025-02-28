@@ -1,18 +1,10 @@
 import React, { useState } from "react";
-import {
-    Box,
-    Button,
-    Modal,
-    TextField,
-    IconButton,
-    Typography,
-} from "@mui/material";
+import { Box, Button, IconButton, Modal, TextField, Typography } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import CloseIcon from "@mui/icons-material/Close";
 
-const Search = () => {
+const Search = ({ isMobile }) => {
     const [open, setOpen] = useState(false);
-
     const handleOpen = () => setOpen(true);
     const handleClose = () => setOpen(false);
 
@@ -28,24 +20,28 @@ const Search = () => {
                     fontSize: "14px",
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "flex-start", // Іконка і текст зліва
-                    gap: "8px",
+                    justifyContent: isMobile ? "center" : "flex-start", // Іконка по центру на мобільних пристроях
+                    gap: isMobile ? "0" : "8px", // Прибрати проміжок між іконкою та текстом на мобільних
                     borderRadius: "6px", // Менш округлі краї
                     border: "1px solid #333", // Темний бордер
-                    padding: "6px 12px", // Відступи для компактного вигляду
-                    width: "180px", // Початкова ширина кнопки
+                    padding: isMobile ? "0" : "6px 12px", // Відсутність відступів для квадратної кнопки на мобільних
+                    width: isMobile ? "42px" : "180px", // Зменшена ширина для мобільних
+                    height: isMobile ? "36px" : "auto", // Зменшена висота для мобільних
+                    minWidth: "36px",
                     transition: "width 0.15s ease", // Швидке розтягнення по ширині
                     transformOrigin: "100% center", // Точка опори справа
                     '&:hover': {
                         backgroundColor: "#2a1b33", // Ховер-ефект
-                        width: "220px", // Відповідно до стилю збільшення вліво
+                        width: isMobile ? "42px" : "220px", // Збільшення ширини для мобільних
                     },
                 }}
             >
                 <SearchIcon sx={{ fontSize: 16 }} />
-                <Typography sx={{ fontSize: "14px", fontWeight: "normal" }}>
-                    Пошук...
-                </Typography>
+                {!isMobile && (
+                    <Typography sx={{ fontSize: "14px", fontWeight: "normal" }}>
+                        Пошук...
+                    </Typography>
+                )}
             </Button>
 
             {/* Модальне вікно для панелі пошуку */}

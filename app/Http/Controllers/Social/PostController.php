@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Social;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Social\Post\CreatePostRequest;
-use App\Http\Requests\Social\Post\UpdatePostRequest;
+use App\Http\Requests\Social\PostRequests\CreatePostRequest;
+use App\Http\Requests\Social\PostRequests\UpdatePostRequest;
 use App\Models\Post;
 use App\Services\Social\PostService;
 use Exception;

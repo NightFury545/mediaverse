@@ -25,8 +25,7 @@ return new class extends Migration
             $table->enum('role', Role::getValues())->default(Role::USER->value);
             $table->string('biography', 364)->nullable();
             $table->date('birthday')->nullable();
-            $table->string('phone_number')->nullable();
-            $table->string('address')->nullable();
+            $table->string('country')->nullable();
             $table->enum('gender', Gender::getValues())->nullable();
             $table->boolean('is_online')->default(false);
             $table->timestamp('last_seen_at')->nullable();

@@ -27,11 +27,16 @@ class MessageSentEvent implements ShouldBroadcast
     /**
      * Get the channels the event should broadcast on.
      *
-     * @return Channel|PresenceChannel|array
+     * @return array
      */
-    public function broadcastOn(): Channel|PresenceChannel|array
+    public function broadcastOn(): array
     {
-        return new PresenceChannel('chat.' . $this->message->chat_id);
+        return [new PresenceChannel('chat.' . $this->message->chat_id)];
+    }
+
+    public function broadcastAs(): string
+    {
+        return 'message.sent';
     }
 
     /**
@@ -42,11 +47,7 @@ class MessageSentEvent implements ShouldBroadcast
     public function broadcastWith(): array
     {
         return [
-            'message' => $this->message->text,  // Текст повідомлення
-            'sender_id' => $this->sender->id,   // ID відправника
-            'sender_name' => $this->sender->name, // Ім'я відправника
-            'created_at' => $this->createdAt,    // Час відправлення
-            'chat_id' => $this->chatId           // ID чату
+            'message' => $this->message->toArray(),
         ];
     }
 }
