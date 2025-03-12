@@ -26,4 +26,9 @@ class Friendship extends Model
     {
         return $this->belongsTo(User::class, 'friend_id');
     }
+
+    public function getFriendOf(User $user): User
+    {
+        return $this->user_id === $user->id ? $this->friend : $this->user;
+    }
 }

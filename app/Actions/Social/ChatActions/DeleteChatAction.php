@@ -9,10 +9,11 @@ use Exception;
 class DeleteChatAction
 {
     /**
-     * Видаляє переданий чат.
+     * Видаляє переданий чат з бази даних.
+     * Виконується в межах транзакції для забезпечення цілісності даних.
      *
-     * @param Chat $chat Об'єкт чату
-     * @throws Exception
+     * @param Chat $chat Об'єкт чату, який потрібно видалити
+     * @throws Exception Викидається, якщо трапилась помилка під час видалення чату або коміт транзакції не вдалий
      */
     public function __invoke(Chat $chat): void
     {

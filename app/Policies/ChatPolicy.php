@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\Role;
 use App\Models\Chat;
 use App\Models\User;
 
@@ -12,7 +13,7 @@ class ChatPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->role === 'admin';
+        return $user->role === Role::ADMIN->value;
     }
 
     /**
@@ -22,7 +23,7 @@ class ChatPolicy
     {
         return $user->id === $chat->user_one_id
             || $user->id === $chat->user_two_id
-            || $user->role === 'admin';
+            || $user->role === Role::ADMIN->value;
     }
 
     /**
@@ -49,6 +50,6 @@ class ChatPolicy
     {
         return $user->id === $chat->user_one_id
             || $user->id === $chat->user_two_id
-            || $user->role === 'admin';
+            || $user->role === Role::ADMIN->value;
     }
 }

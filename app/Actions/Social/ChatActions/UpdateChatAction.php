@@ -11,12 +11,12 @@ use Illuminate\Support\Facades\Log;
 class UpdateChatAction
 {
     /**
-     * Оновлює чат з новими даними.
+     * Оновлює чат з новими даними, відправляє подію про оновлення чату.
      *
      * @param Chat $chat Об'єкт чату, який потрібно оновити
      * @param array $data Дані для оновлення (наприклад, 'last_message', 'last_message_at')
-     * @return Chat
-     * @throws Exception
+     * @return Chat Оновлений об'єкт чату
+     * @throws Exception Якщо виникає помилка під час оновлення чату
      */
     public function __invoke(Chat $chat, array $data): Chat
     {

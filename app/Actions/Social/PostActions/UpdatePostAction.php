@@ -13,7 +13,13 @@ class UpdatePostAction
     use ProcessesAttachments;
 
     /**
-     * @throws Exception
+     * Оновлює дані поста, зберігаючи нові значення для полів, таких як title, content, visibility, attachments і comments_enabled.
+     * Також оновлюються теги поста, додаючи нові або видаляючи старі.
+     *
+     * @param Post $post Об'єкт поста, який потрібно оновити
+     * @param array $data Дані для оновлення, що включають title, content, visibility, attachments, comments_enabled і tags
+     * @return Post Оновлений об'єкт поста
+     * @throws Exception Якщо виникла помилка при оновленні поста (наприклад, проблема з базою даних або файлами)
      */
     public function __invoke(Post $post, array $data): Post
     {
@@ -39,11 +45,11 @@ class UpdatePostAction
     }
 
     /**
-     * Підготовка даних для оновлення поста.
+     * Підготовка даних для оновлення поста, збереження значень або використання поточних значень, якщо нові не були передані.
      *
-     * @param array $data
-     * @param Post $post
-     * @return array
+     * @param array $data Дані для оновлення поста
+     * @param Post $post Поточний пост для отримання значень за замовчуванням
+     * @return array Підготовлені дані для оновлення
      */
     private function prepareUpdatePostData(array $data, Post $post): array
     {
@@ -56,6 +62,13 @@ class UpdatePostAction
         ];
     }
 
+    /**
+     * Оновлює теги поста. Якщо тегів не було в базі, вони додаються.
+     * Синхронізує теги між постом та записами в базі даних.
+     *
+     * @param Post $post Пост, до якого потрібно додати теги
+     * @param array $tags Массив тегів для синхронізації
+     */
     private function syncTags(Post $post, array $tags): void
     {
         $tagIds = Tag::whereIn('name', $tags)->pluck('id', 'name');

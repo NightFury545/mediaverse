@@ -22,8 +22,8 @@ class FriendshipPolicy
      */
     public function view(User $user, Friendship $friendship): bool
     {
-        return $user->id === $friendship->user()->id
-            || $user->id === $friendship->friend()->id
+        return $user->id === $friendship->user->id
+            || $user->id === $friendship->friend->id
             || $user->role === Role::ADMIN->value;
     }
 
@@ -40,8 +40,8 @@ class FriendshipPolicy
      */
     public function update(User $user, Friendship $friendship): bool
     {
-        return $user->id === $friendship->user()->id
-            || $user->id === $friendship->friend()->id
+        return $user->id === $friendship->user->id
+            || $user->id === $friendship->friend->id
             || $user->role === Role::ADMIN->value;
     }
 
@@ -50,8 +50,8 @@ class FriendshipPolicy
      */
     public function delete(User $user, Friendship $friendship): bool
     {
-        return $user->id === $friendship->user()->id
-            || $user->id === $friendship->friend()->id
+        return $user->id === $friendship->user->id
+            || $user->id === $friendship->friend->id
             || $user->role === Role::ADMIN->value;
     }
 }

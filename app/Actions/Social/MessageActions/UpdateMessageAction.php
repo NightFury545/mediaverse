@@ -10,12 +10,14 @@ use Illuminate\Support\Facades\DB;
 class UpdateMessageAction
 {
     /**
-     * Оновлює повідомлення з новими даними.
+     * Оновлює повідомлення з новими даними, наприклад, контентом або додатками.
+     * Використовує транзакцію для забезпечення атомарності операції.
+     * Після оновлення повідомлення транслюється подія, яка інформує про оновлення.
      *
-     * @param Message $message Повідомлення, яке потрібно оновити
+     * @param Message $message Повідомлення, яке необхідно оновити
      * @param array $data Дані для оновлення (наприклад, 'content', 'attachments', 'is_read')
      * @return Message Оновлене повідомлення
-     * @throws Exception
+     * @throws Exception Якщо сталася помилка під час оновлення повідомлення
      */
     public function __invoke(Message $message, array $data): Message
     {
@@ -36,10 +38,11 @@ class UpdateMessageAction
     }
 
     /**
-     * Оновлює повідомлення з новими даними.
+     * Оновлює дані повідомлення в базі даних.
+     * Це метод для безпосереднього оновлення атрибутів повідомлення через модель.
      *
-     * @param Message $message
-     * @param array $data
+     * @param Message $message Повідомлення, яке потрібно оновити
+     * @param array $data Дані для оновлення (наприклад, 'content', 'attachments', 'is_read')
      * @return void
      */
     private function updateMessage(Message $message, array $data): void
@@ -48,11 +51,12 @@ class UpdateMessageAction
     }
 
     /**
-     * Готує дані для оновлення повідомлення.
+     * Підготовлює дані для оновлення повідомлення, з урахуванням наявних значень.
+     * Якщо в масиві даних немає значення для певного поля, то використовується поточне значення з бази даних.
      *
-     * @param Message $message
-     * @param array $data
-     * @return array
+     * @param Message $message Повідомлення, яке потрібно оновити
+     * @param array $data Дані для оновлення
+     * @return array Підготовлені дані для оновлення повідомлення
      */
     private function prepareUpdateMessageData(Message $message, array $data): array
     {

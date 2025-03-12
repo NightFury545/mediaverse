@@ -11,11 +11,12 @@ use Spatie\QueryBuilder\AllowedFilter;
 class GetChatsAction
 {
     /**
-     * Отримує список чатів для поточного користувача з сортуванням.
+     * Отримує список чатів для поточного користувача з можливістю фільтрації і сортування.
+     * Підтримує пагінацію.
      *
      * @param int $perPage Кількість чатів на сторінці
-     * @return LengthAwarePaginator
-     * @throws Exception
+     * @return LengthAwarePaginator Пагіновані результати чатів
+     * @throws Exception Якщо виникає помилка під час отримання чатів
      */
     public function __invoke(int $perPage = 20): LengthAwarePaginator
     {
@@ -34,7 +35,7 @@ class GetChatsAction
     /**
      * Створює базовий запит для отримання чатів для поточного користувача.
      *
-     * @return QueryBuilder
+     * @return QueryBuilder Об'єкт запиту для чатів
      */
     private function buildBaseQuery(): QueryBuilder
     {
@@ -54,7 +55,7 @@ class GetChatsAction
     /**
      * Додає сортування за останнім повідомленням і за датою створення чату.
      *
-     * @param QueryBuilder $query
+     * @param QueryBuilder $query Об'єкт запиту для чатів
      */
     private function applySorting(QueryBuilder $query): void
     {
@@ -64,7 +65,7 @@ class GetChatsAction
     /**
      * Додає фільтрацію для пошуку за username співрозмовника.
      *
-     * @param QueryBuilder $query
+     * @param QueryBuilder $query Об'єкт запиту для чатів
      */
     private function applyFilters(QueryBuilder $query): void
     {

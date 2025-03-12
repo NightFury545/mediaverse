@@ -8,11 +8,12 @@ use Exception;
 class DeletePostAction
 {
     /**
-     * Викликається для видалення поста.
+     * Видаляє пост з бази даних.
+     * У разі помилки, наприклад, при проблемах з файлами або базою даних, генерується виняток.
      *
-     * @param Post $post
-     * @return bool
-     * @throws Exception
+     * @param Post $post Пост, який потрібно видалити
+     * @return bool true, якщо пост успішно видалений
+     * @throws Exception Якщо виникла помилка під час видалення поста
      */
     public function __invoke(Post $post): bool
     {

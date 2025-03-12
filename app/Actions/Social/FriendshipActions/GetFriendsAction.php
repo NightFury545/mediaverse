@@ -4,12 +4,20 @@ namespace App\Actions\Social\FriendshipActions;
 
 use App\Models\User;
 use App\Actions\Filters\RangeFilter;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Spatie\QueryBuilder\QueryBuilder;
 use Spatie\QueryBuilder\AllowedFilter;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 class GetFriendsAction
 {
+    /**
+     * Отримує список друзів користувача з фільтрацією, сортуванням та пагінацією.
+     *
+     * @param User $user Користувач, для якого потрібно отримати список друзів
+     * @param int $perPage Кількість елементів на сторінці для пагінації
+     * @return LengthAwarePaginator Пагінований список друзів
+     */
     public function __invoke(User $user, int $perPage = 20): LengthAwarePaginator
     {
         return $this->applyPagination(
@@ -20,7 +28,13 @@ class GetFriendsAction
         );
     }
 
-    private function applyFilters($query): QueryBuilder
+    /**
+     * Застосовує фільтри до запиту.
+     *
+     * @param BelongsToMany $query Запит для відношення між користувачами (друзі)
+     * @return QueryBuilder Оброблений запит з дозволеними фільтрами
+     */
+    private function applyFilters(BelongsToMany $query): QueryBuilder
     {
         return QueryBuilder::for($query)->allowedFilters([
             AllowedFilter::exact('country'),
@@ -33,6 +47,12 @@ class GetFriendsAction
         ]);
     }
 
+    /**
+     * Застосовує сортування до запиту.
+     *
+     * @param QueryBuilder $query Запит, до якого буде застосоване сортування
+     * @return QueryBuilder Оброблений запит з дозволеними варіантами сортування
+     */
     private function applySorting(QueryBuilder $query): QueryBuilder
     {
         return $query->allowedSorts([
@@ -43,6 +63,13 @@ class GetFriendsAction
         ]);
     }
 
+    /**
+     * Застосовує пагінацію до запиту.
+     *
+     * @param QueryBuilder $query Запит, до якого буде застосована пагінація
+     * @param int $perPage Кількість елементів на сторінці для пагінації
+     * @return LengthAwarePaginator Пагінований результат
+     */
     private function applyPagination(QueryBuilder $query, int $perPage): LengthAwarePaginator
     {
         return $query->paginate($perPage);

@@ -9,12 +9,15 @@ use Illuminate\Support\Facades\DB;
 class UpdateUserAction
 {
     /**
-     * Оновлює повідомлення з новими даними.
+     * Оновлює дані користувача з новими значеннями.
      *
-     * @param User $user
-     * @param array $data
-     * @return User
-     * @throws Exception
+     * Цей метод оновлює дані користувача, застосовуючи транзакцію бази даних для забезпечення
+     * цілісності. У разі помилки під час оновлення транзакція буде скасована.
+     *
+     * @param User $user Користувач, дані якого потрібно оновити
+     * @param array $data Масив з новими даними для оновлення
+     * @return User Оновлений користувач
+     * @throws Exception Якщо сталася помилка під час оновлення користувача
      */
     public function __invoke(User $user, array $data): User
     {
@@ -33,10 +36,12 @@ class UpdateUserAction
     }
 
     /**
-     * Оновлює повідомлення з новими даними.
+     * Оновлює дані користувача.
      *
-     * @param User $user
-     * @param array $data
+     * Цей метод фактично виконує оновлення даних користувача за допомогою методу `update()`.
+     *
+     * @param User $user Користувач, дані якого потрібно оновити
+     * @param array $data Масив з новими даними для оновлення
      * @return void
      */
     private function updateUser(User $user, array $data): void
@@ -44,6 +49,16 @@ class UpdateUserAction
         $user->update($this->prepareUpdateUserData($user, $data));
     }
 
+    /**
+     * Підготовка даних для оновлення користувача.
+     *
+     * Цей метод формує масив з новими даними користувача, зберігаючи існуючі значення,
+     * якщо нові не надані.
+     *
+     * @param User $user Користувач, дані якого потрібно оновити
+     * @param array $data Масив з новими даними для оновлення
+     * @return array Підготовлений масив даних для оновлення
+     */
     private function prepareUpdateUserData(User $user, array $data): array
     {
         return [

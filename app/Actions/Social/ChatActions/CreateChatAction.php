@@ -2,21 +2,23 @@
 
 namespace App\Actions\Social\ChatActions;
 
+use App\Enums\MessagePrivacy;
 use App\Events\Social\Chat\ChatCreatedEvent;
 use App\Models\Chat;
 use App\Models\User;
-use Illuminate\Support\Facades\DB;
 use Exception;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class CreateChatAction
 {
     /**
      * Створює новий чат між двома користувачами.
+     * Виконується перевірка всіх необхідних умов для створення чату, а також обробка транзакцій.
      *
-     * @param array $data Дані чату (user_two_id)
+     * @param array $data Дані чату, що включають ID другого користувача (user_two_id)
      * @return Chat Створений чат
-     * @throws Exception
+     * @throws Exception Викидається, якщо трапилась помилка під час створення чату або коміт транзакції не вдалий
      */
     public function __invoke(array $data): Chat
     {
@@ -41,21 +43,22 @@ class CreateChatAction
     /**
      * Перевіряє всі необхідні умови перед створенням чату.
      *
-     * @param array $data
-     * @throws Exception
+     * @param array $data Дані чату, що включають ID другого користувача
+     * @throws Exception Викидається, якщо одна з умов не виконана
      */
     private function ensureConditionsMet(array $data): void
     {
         $this->validateChatDoesNotExist($data);
         $this->validateUsersAreDifferent($data);
         $this->validateNotBlockedUsers($data);
+        $this->validateMessagePrivacy($data);
     }
 
     /**
      * Перевіряє, чи вже існує чат між цими користувачами.
      *
-     * @param array $data
-     * @throws Exception
+     * @param array $data Дані чату, що включають ID другого користувача
+     * @throws Exception Викидається, якщо чат між користувачами вже існує
      */
     private function validateChatDoesNotExist(array $data): void
     {
@@ -75,8 +78,8 @@ class CreateChatAction
     /**
      * Перевіряє, що користувач не створює чат сам із собою.
      *
-     * @param array $data
-     * @throws Exception
+     * @param array $data Дані чату, що включають ID другого користувача
+     * @throws Exception Викидається, якщо користувач намагається створити чат з самим собою
      */
     private function validateUsersAreDifferent(array $data): void
     {
@@ -88,11 +91,12 @@ class CreateChatAction
     /**
      * Перевіряє, що користувач не знаходиться у списку заблокованих.
      *
-     * @param array $data
-     * @throws Exception
+     * @param array $data Дані чату, що включають ID другого користувача
+     * @throws Exception Викидається, якщо один з користувачів заблокував іншого
      */
     private function validateNotBlockedUsers(array $data): void
     {
+        /** @var User $currentUser */
         $currentUser = Auth::user();
         $otherUser = User::find($data['user_two_id']);
 
@@ -109,10 +113,33 @@ class CreateChatAction
     }
 
     /**
+     * Перевіряє налаштування приватності повідомлень.
+     *
+     * @param array $data Дані чату, що включають ID другого користувача
+     * @throws Exception Викидається, якщо налаштування приватності не дозволяють створення чату
+     */
+    private function validateMessagePrivacy(array $data): void
+    {
+        $otherUser = User::find($data['user_two_id']);
+        $settings = $otherUser->settings;
+
+        if ($settings->message_privacy === MessagePrivacy::FRIENDS_ONLY->value && !$otherUser->friends()->where(
+                'friend_id',
+                Auth::id()
+            )->exists()) {
+            throw new Exception('Цей користувач приймає повідомлення лише від друзів.');
+        }
+
+        if ($settings->message_privacy === MessagePrivacy::NO_ONE->value) {
+            throw new Exception('Цей користувач не приймає нові повідомлення.');
+        }
+    }
+
+    /**
      * Створює новий чат.
      *
-     * @param array $data
-     * @return Chat
+     * @param array $data Дані чату, що включають ID другого користувача
+     * @return Chat Створений чат
      */
     private function createChat(array $data): Chat
     {

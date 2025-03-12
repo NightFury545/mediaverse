@@ -11,11 +11,14 @@ class DeleteMessageAction
     /**
      * Видаляє передане повідомлення з використанням транзакції та обробкою винятків.
      *
-     * @param Message $message
-     * @return bool
-     * @throws Exception
+     * Цей метод видаляє конкретне повідомлення з бази даних в рамках транзакції. Якщо операція не вдається,
+     * буде здійснено відкат транзакції, і буде викинуто виключення з повідомленням про помилку.
+     *
+     * @param Message $message Повідомлення, яке необхідно видалити.
+     * @return bool Повертає `true`, якщо видалення було успішним.
+     * @throws Exception Якщо сталася помилка під час видалення повідомлення.
      */
-    public function execute(Message $message): bool
+    public function __invoke(Message $message): bool
     {
         DB::beginTransaction();
 

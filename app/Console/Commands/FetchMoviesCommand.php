@@ -11,14 +11,64 @@ use Illuminate\Support\Facades\Http;
 
 class FetchMoviesCommand extends Command
 {
+    /**
+     * Назва та підпис команди для виконання через командний рядок.
+     *
+     * Це визначає, як користувач викликає команду через Artisan.
+     *
+     * @var string
+     */
     protected $signature = 'movies:fetch';
+
+    /**
+     * Опис команди для виконання через командний рядок.
+     *
+     * Опис пояснює, що робить ця команда.
+     *
+     * @var string
+     */
     protected $description = 'Fetch new movies from TMDb API and save to database';
 
+    /**
+     * URL для звернення до TMDb API.
+     *
+     * @var string
+     */
     private string $apiUrl;
+
+    /**
+     * Ключ API для доступу до TMDb.
+     *
+     * @var string
+     */
     private string $apiKey;
+
+    /**
+     * Асоціативний масив жанрів фільмів з їхнім ID на назву.
+     *
+     * Використовується для перетворення ID жанрів на їхні відповідні назви.
+     *
+     * @var array
+     */
     private array $genresMap = [];
+
+    /**
+     * Загальна кількість сторінок фільмів для отримання.
+     *
+     * Це обмеження кількості сторінок, які будуть запитуватись з API.
+     *
+     * @var int
+     */
     private int $totalPages = 5;
 
+    /**
+     * Виконання основної логіки команди: отримання фільмів та їх збереження у базі даних.
+     *
+     * Процес включає отримання жанрів, фільмів, акторів і режисерів із TMDb API,
+     * обробку та збереження їх у відповідні таблиці бази даних.
+     *
+     * @return void
+     */
     public function handle(): void
     {
         $this->apiUrl = config('services.tmdb.api_url');
@@ -52,6 +102,14 @@ class FetchMoviesCommand extends Command
         $this->info('New movies successfully fetched and stored.');
     }
 
+    /**
+     * Отримує жанри фільмів з TMDb API та зберігає їх у мапу.
+     *
+     * Цей метод запитує API для отримання списку жанрів фільмів та зберігає їх у масив
+     * для подальшого використання при прив'язці жанрів до фільмів.
+     *
+     * @return void
+     */
     private function fetchGenres(): void
     {
         $response = Http::get("{$this->apiUrl}/genre/movie/list", [
@@ -66,6 +124,15 @@ class FetchMoviesCommand extends Command
         }
     }
 
+    /**
+     * Обробляє отримані дані про фільм, створює або оновлює записи в базі даних.
+     *
+     * Використовує API для отримання додаткових деталей про фільм, акторів і режисерів.
+     * Після цього додає фільм, акторів, режисерів та жанри в базу даних.
+     *
+     * @param array $movieData
+     * @return void
+     */
     private function processMovie(array $movieData): void
     {
         $directorData = $this->fetchDirector($movieData['id']);
@@ -93,6 +160,14 @@ class FetchMoviesCommand extends Command
         $this->attachGenres($movie, $movieData['genre_ids'] ?? []);
     }
 
+    /**
+     * Отримує деталі фільму за його ID.
+     *
+     * Запитує API для отримання додаткової інформації про фільм (наприклад, тривалість).
+     *
+     * @param int $movieId
+     * @return array
+     */
     private function fetchMovieDetails(int $movieId): array
     {
         $response = Http::get("{$this->apiUrl}/movie/{$movieId}", [
@@ -110,6 +185,14 @@ class FetchMoviesCommand extends Command
         ];
     }
 
+    /**
+     * Отримує інформацію про режисера фільму за його ID.
+     *
+     * Запитує API для отримання даних про режисера фільму.
+     *
+     * @param int $movieId
+     * @return array
+     */
     private function fetchDirector(int $movieId): array
     {
         $response = Http::get("{$this->apiUrl}/movie/{$movieId}/credits", [
@@ -140,6 +223,14 @@ class FetchMoviesCommand extends Command
         ];
     }
 
+    /**
+     * Отримує деталі актора за його ID.
+     *
+     * Запитує API для отримання додаткової інформації про актора.
+     *
+     * @param int $actorId
+     * @return array
+     */
     private function fetchActorDetails(int $actorId): array
     {
         $response = Http::get("{$this->apiUrl}/person/{$actorId}", [
@@ -158,6 +249,15 @@ class FetchMoviesCommand extends Command
         ];
     }
 
+    /**
+     * Додає акторів до фільму за їх ID.
+     *
+     * Зберігає акторів у таблиці `actors` та встановлює зв'язок з фільмом.
+     *
+     * @param Movie $movie
+     * @param int $movieId
+     * @return void
+     */
     private function attachActors(Movie $movie, int $movieId): void
     {
         $response = Http::get("{$this->apiUrl}/movie/{$movieId}/credits", [
@@ -185,6 +285,15 @@ class FetchMoviesCommand extends Command
         $movie->actors()->sync($actors->pluck('id'));
     }
 
+    /**
+     * Додає жанри до фільму за їх ID.
+     *
+     * Зберігає жанри у таблиці `genres` та встановлює зв'язок з фільмом.
+     *
+     * @param Movie $movie
+     * @param array $genreIds
+     * @return void
+     */
     private function attachGenres(Movie $movie, array $genreIds): void
     {
         $genres = collect($genreIds)
@@ -193,6 +302,14 @@ class FetchMoviesCommand extends Command
         $movie->genres()->sync($genres->pluck('id'));
     }
 
+    /**
+     * Отримує деталі особи (актора чи режисера) за його ID.
+     *
+     * Запитує API для отримання додаткової інформації про особу.
+     *
+     * @param int $personId
+     * @return array
+     */
     private function fetchPersonDetails(int $personId): array
     {
         $response = Http::get("{$this->apiUrl}/person/{$personId}", [

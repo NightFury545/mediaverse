@@ -3,11 +3,13 @@
 use App\Http\Controllers\Social\PostController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['auth', 'verified'])->group(function () {
-    Route::post('/posts', [PostController::class, 'store'])->name('posts.store');
-    Route::put('/posts/{post}', [PostController::class, 'update'])->name('posts.update');
-    Route::delete('/posts/{post}', [PostController::class, 'destroy'])->name('posts.destroy');
+Route::prefix('posts')->middleware(['auth', 'verified'])->group(function () {
+    Route::post('/', [PostController::class, 'store'])->name('posts.store');
+    Route::put('/{post}', [PostController::class, 'update'])->name('posts.update');
+    Route::delete('/{post}', [PostController::class, 'destroy'])->name('posts.destroy');
 });
 
-Route::get('/posts', [PostController::class, 'index'])->name('posts.index');
-Route::get('/posts/{post}', [PostController::class, 'show'])->name('posts.show');
+Route::prefix('posts')->group(function () {
+    Route::get('/', [PostController::class, 'index'])->name('posts.index');
+    Route::get('/{post}', [PostController::class, 'show'])->name('posts.show');
+});

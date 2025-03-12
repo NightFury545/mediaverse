@@ -2,8 +2,13 @@
 
 namespace App\Actions\Social\FriendshipActions;
 
+use App\Enums\FriendshipStatus;
+use App\Enums\NotificationType;
 use App\Models\Friendship;
+use App\Models\User;
+use App\Notifications\Social\Friendship\FriendRequestRejectedNotification;
 use Exception;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class RejectFriendRequestAction
@@ -21,7 +26,13 @@ class RejectFriendRequestAction
         try {
             $this->ensureCanReject($friendship);
 
-            $friendship->delete();
+            /** @var User $rejector */
+            $rejector = Auth::user();
+            $sender = $friendship->getFriendOf($rejector);
+
+            $friendship->update(['status' => FriendshipStatus::REJECTED->value]);
+
+            $this->sendFriendRequestRejectedNotificationIfEnabled($rejector, $sender);
 
             DB::commit();
         } catch (Exception $e) {
@@ -31,15 +42,32 @@ class RejectFriendRequestAction
     }
 
     /**
-     * Перевіряє, чи можна відхилити запит.
+     * Перевіряє, чи можна відхилити запит на дружбу.
      *
-     * @param Friendship $friendship
-     * @throws Exception
+     * @param Friendship $friendship Запит на дружбу, який потрібно перевірити.
+     * @throws Exception Якщо запит не можна відхилити.
      */
     private function ensureCanReject(Friendship $friendship): void
     {
-        if ($friendship->status !== 'pending') {
+        if ($friendship->status !== FriendshipStatus::PENDING->value) {
             throw new Exception('Цей запит не можна відхилити.');
+        }
+
+        if (auth()->id() !== $friendship->friend_id) {
+            throw new Exception('Ви не можете відхилити цей запит.');
+        }
+    }
+
+    /**
+     * Надсилає сповіщення користувачу, якщо той дозволив отримувати такі повідомлення.
+     *
+     * @param User $rejector Користувач, який відхиляє запит на дружбу.
+     * @param User $sender Користувач, якому було надіслано запит на дружбу.
+     */
+    private function sendFriendRequestRejectedNotificationIfEnabled(User $rejector, User $sender): void
+    {
+        if ($sender->settings->getNotificationEnabled(NotificationType::FRIEND_REQUEST)) {
+            $sender->notify(new FriendRequestRejectedNotification($rejector, $sender));
         }
     }
 }

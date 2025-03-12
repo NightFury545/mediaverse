@@ -13,15 +13,19 @@ class GetPostsAction
 {
     /**
      * Отримує список постів з можливістю фільтрації, сортування та пагінації.
+     * Фільтрація включає: user_id, visibility, comments_enabled, title, content, likes_count, comments_count, views_count, updated_at, created_at та tags.
+     * Пагінація дозволяє обмежити кількість постів на сторінці.
      *
-     * @param int $perPage Кількість постів на сторінці
-     * @return LengthAwarePaginator
-     * @throws Exception
+     * @param int $perPage Кількість постів на сторінці (за замовчуванням 20)
+     * @return LengthAwarePaginator Сторінковий результат з постами
+     * @throws Exception Якщо виникла помилка під час виконання запиту
      */
     public function __invoke(int $perPage = 20): LengthAwarePaginator
     {
         try {
             $query = $this->buildBaseQuery();
+
+            $this->applyVisibility($query);
 
             $this->applyFilters($query);
 
@@ -34,9 +38,9 @@ class GetPostsAction
     }
 
     /**
-     * Створює базовий запит для отримання постів.
+     * Створює базовий запит для отримання постів з включенням зв'язків з користувачами та тегами.
      *
-     * @return QueryBuilder
+     * @return QueryBuilder Повертає побудований запит для Post
      */
     private function buildBaseQuery(): QueryBuilder
     {
@@ -45,9 +49,11 @@ class GetPostsAction
     }
 
     /**
-     * Застосовує фільтрацію до запиту.
+     * Застосовує фільтрацію до запиту. Дозволяється фільтрація по кількох полях.
+     * Це включає user_id, visibility, comments_enabled, title, content, likes_count, comments_count, views_count,
+     * updated_at, created_at, а також фільтрацію по тегах.
      *
-     * @param QueryBuilder $query
+     * @param QueryBuilder $query Запит для моделі Post
      */
     private function applyFilters(QueryBuilder $query): void
     {
@@ -62,13 +68,20 @@ class GetPostsAction
             AllowedFilter::custom('views_count', new RangeFilter()),
             AllowedFilter::custom('updated_at', new RangeFilter()),
             AllowedFilter::custom('created_at', new RangeFilter()),
+            AllowedFilter::callback('tags', function ($query, $value) {
+                $query->whereHas('tags', function ($tagQuery) use ($value) {
+                    $tagQuery->whereIn('tags.name', (array) $value)
+                        ->orWhereIn('tags.slug', (array) $value);
+                });
+            }),
         ]);
     }
 
     /**
-     * Застосовує сортування до запиту.
+     * Застосовує сортування до запиту, дозволяючи сортувати за кількома полями.
+     * Дозволені поля для сортування: created_at, likes_count, comments_count, views_count.
      *
-     * @param QueryBuilder $query
+     * @param QueryBuilder $query Запит для моделі Post
      */
     private function applySorting(QueryBuilder $query): void
     {
@@ -76,9 +89,12 @@ class GetPostsAction
     }
 
     /**
-     * Застосовує логіку видимості до запиту.
+     * Застосовує логіку видимості до запиту, враховуючи:
+     * 1. Публічні пости доступні для всіх користувачів.
+     * 2. Пости користувача доступні тільки йому.
+     * 3. Пости доступні друзям, якщо між ними є зв'язок дружби.
      *
-     * @param QueryBuilder $query
+     * @param QueryBuilder $query Запит для моделі Post
      */
     private function applyVisibility(QueryBuilder $query): void
     {

@@ -9,7 +9,12 @@ use Exception;
 class GetPostAction
 {
     /**
-     * @throws Exception
+     * Отримує пост за заданим ідентифікатором та обробляє перегляд поста для зареєстрованого користувача.
+     * Якщо користувач ще не переглядав цей пост, записується новий перегляд та збільшується лічильник переглядів.
+     *
+     * @param string $identifier Ідентифікатор поста (ID або slug)
+     * @return Post|null Повертає пост, якщо він знайдений, або null, якщо пост не існує
+     * @throws Exception Якщо виникла помилка під час отримання поста з бази даних або під час обробки доступу
      */
     public function __invoke(string $identifier): ?Post
     {
@@ -28,6 +33,12 @@ class GetPostAction
         }
     }
 
+    /**
+     * Знаходить пост за ідентифікатором (ID або slug).
+     *
+     * @param string $identifier Ідентифікатор поста
+     * @return Post|null Повертає пост, якщо знайдений, або null
+     */
     private function findPostByIdentifier(string $identifier): ?Post
     {
         return Post::with(['user', 'tags'])
@@ -38,6 +49,13 @@ class GetPostAction
             ->first();
     }
 
+    /**
+     * Обробляє перегляд поста для авторизованого користувача, якщо це перший перегляд.
+     * Якщо пост ще не був переглянутий користувачем, зберігається новий перегляд та збільшується лічильник переглядів.
+     *
+     * @param Post $post Пост, який переглядається
+     * @return void
+     */
     private function handlePostView(Post $post): void
     {
         $user = auth()->user();
@@ -48,6 +66,13 @@ class GetPostAction
         }
     }
 
+    /**
+     * Перевіряє, чи користувач вже переглядав пост.
+     *
+     * @param int $postId Ідентифікатор поста
+     * @param int $userId Ідентифікатор користувача
+     * @return bool true, якщо пост вже був переглянутий користувачем
+     */
     private function hasUserViewedPost(int $postId, int $userId): bool
     {
         return PostView::where('post_id', $postId)
@@ -55,6 +80,13 @@ class GetPostAction
             ->exists();
     }
 
+    /**
+     * Записує новий перегляд поста для користувача.
+     *
+     * @param int $postId Ідентифікатор поста
+     * @param int $userId Ідентифікатор користувача
+     * @return void
+     */
     private function recordPostView(int $postId, int $userId): void
     {
         PostView::create([

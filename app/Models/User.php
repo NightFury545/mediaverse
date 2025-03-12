@@ -9,6 +9,7 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Tymon\JWTAuth\Contracts\JWTSubject;
@@ -112,18 +113,6 @@ class User extends Authenticatable implements MustVerifyEmail, JWTSubject, Filam
         return $this->hasMany(Friendship::class, 'friend_id');
     }
 
-    public function pendingFriendRequests(): HasMany
-    {
-        return $this->hasMany(Friendship::class, 'friend_id')
-            ->where('status', 'pending');
-    }
-
-    public function pendingSentFriendRequests(): HasMany
-    {
-        return $this->hasMany(Friendship::class, 'user_id')
-            ->where('status', 'pending');
-    }
-
     public function blockedUsers(): HasMany
     {
         return $this->hasMany(UserBlock::class, 'user_id');
@@ -132,5 +121,21 @@ class User extends Authenticatable implements MustVerifyEmail, JWTSubject, Filam
     public function blockedByUsers(): HasMany
     {
         return $this->hasMany(UserBlock::class, 'blocked_id');
+    }
+
+    public function settings(): HasOne
+    {
+        return $this->hasOne(Setting::class);
+    }
+
+    public function isFriendWith($friendId)
+    {
+        return Friendship::where(function($query) use ($friendId) {
+            $query->where('user_id', $this->id)
+                ->where('friend_id', $friendId);
+        })->orWhere(function($query) use ($friendId) {
+            $query->where('user_id', $friendId)
+                ->where('friend_id', $this->id);
+        })->exists();
     }
 }
