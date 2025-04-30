@@ -7,6 +7,7 @@ use App\Actions\Traits\ProcessesAttachments;
 use App\Events\Social\Chat\MessageSentEvent;
 use App\Models\Chat;
 use App\Models\Message;
+use App\Models\User;
 use Exception;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -41,6 +42,7 @@ class CreateMessageAction
             $chat = Chat::findOrFail($data['chat_id']);
 
             $this->ensureUserIsChatParticipant($user->id, $chat);
+            $this->ensureUsersNotBlocked($chat, $user->id);
 
             $attachments = $this->processAttachments($data['attachments'] ?? [], 'private');
 
@@ -92,4 +94,31 @@ class CreateMessageAction
             throw new Exception('Ви не можете надсилати повідомлення в цей чат.');
         }
     }
+
+    /**
+     * Перевіряє, що жоден з учасників не заблокував іншого.
+     *
+     * @param Chat $chat Чат між користувачами.
+     * @param int $currentUserId ID поточного користувача.
+     * @throws Exception Якщо один з користувачів заблокував іншого.
+     */
+    private function ensureUsersNotBlocked(Chat $chat, int $currentUserId): void
+    {
+        /** @var User $currentUser */
+        $currentUser = Auth::user();
+        $otherUserId = $chat->user_one_id === $currentUserId ? $chat->user_two_id : $chat->user_one_id;
+        $otherUser = User::find($otherUserId);
+
+        $isBlockedByCurrentUser = $currentUser->blockedUsers()->where('blocked_id', $otherUser->id)->exists();
+        $isBlockedByOtherUser = $otherUser->blockedUsers()->where('blocked_id', $currentUser->id)->exists();
+
+        if ($isBlockedByCurrentUser) {
+            throw new Exception('Ви заблокували цього користувача і не можете надсилати повідомлення.');
+        }
+
+        if ($isBlockedByOtherUser) {
+            throw new Exception('Цей користувач заблокував вас. Повідомлення неможливе.');
+        }
+    }
+
 }

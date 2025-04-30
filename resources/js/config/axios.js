@@ -1,7 +1,17 @@
 import axios from 'axios';
+import {authActions} from "@/api/actions";
+import {authUrls} from "@/api/urls";
+import {userUrls} from "@/api/urls/index.js";
+
+let externalShowModal = () => {
+};
+
+export const setShowModal = (fn) => {
+    externalShowModal = fn;
+};
 
 const axiosInstance = axios.create({
-    baseURL: import.meta.env.REACT_APP_API_URL,
+    baseURL: import.meta.env.VITE_API_URL,
     timeout: 10000,
 });
 
@@ -11,37 +21,40 @@ axiosInstance.interceptors.request.use(
         if (token) {
             config.headers['Authorization'] = `Bearer ${token}`;
         }
+        config.headers['Accept'] = 'application/json';
         return config;
     },
-    (error) => {
-        return Promise.reject(error);
-    }
+    (error) => Promise.reject(error)
 );
 
 axiosInstance.interceptors.response.use(
-    (response) => {
-        return response;
-    },
+    (response) => response,
     async (error) => {
         const originalRequest = error.config;
 
-        if (error.response && error.response.status === 401 && !originalRequest._retry) {
+        if (error.response && error.response.status === 401 && !originalRequest._retry && originalRequest.url !== authUrls.refreshToken) {
             originalRequest._retry = true;
 
             try {
-                const refreshToken = localStorage.getItem('refresh_token');
-                if (refreshToken) {
-                    const response = await axiosInstance.post('/refresh-token', { refresh_token: refreshToken });
+                const response = await authActions.refreshToken();
 
-                    const newAccessToken = response.data.access_token;
-                    localStorage.setItem('access_token', newAccessToken);
+                const newAccessToken = response.data.access_token;
+                localStorage.setItem('access_token', newAccessToken);
 
-                    originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
-                    return axiosInstance(originalRequest);
-                }
+                originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
+
+                return axiosInstance(originalRequest);
             } catch (refreshError) {
-                // TODO: Показати модальне вікно для авторизації
+                if (originalRequest.url !== userUrls.me) {
+                    externalShowModal();
+                }
+                return Promise.reject(refreshError);
             }
+        }
+
+        if (error.response && error.response.status === 403 &&
+            error.response.data?.message === "Your email address is not verified.") {
+            externalShowModal();
         }
 
         return Promise.reject(error);

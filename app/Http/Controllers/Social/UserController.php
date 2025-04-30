@@ -110,5 +110,19 @@ class UserController extends Controller
             ], 500);
         }
     }
+
+    public function me(): JsonResponse
+    {
+        try {
+            $user = $this->userService->me();
+
+            return response()->json($user);
+        } catch (Exception $e) {
+            return response()->json([
+                'error' => 'Failed to get user: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
 }
 

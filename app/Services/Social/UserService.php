@@ -7,6 +7,7 @@ use App\Actions\Social\UserActions\GetUserAction;
 use App\Actions\Social\UserActions\GetUsersAction;
 use App\Actions\Social\UserActions\UpdateUserAction;
 use App\Models\User;
+use Exception;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 class UserService
@@ -38,4 +39,19 @@ class UserService
     {
         ($this->deleteUserAction)($user);
     }
+
+    /**
+     * @throws Exception
+     */
+    public function me(): User
+    {
+        $user = auth()->user();
+
+        if (!$user) {
+            throw new Exception('Користувач не авторизований.');
+        }
+
+        return $user->makeHidden(['password', 'google_id', 'github_id']);
+    }
+
 }

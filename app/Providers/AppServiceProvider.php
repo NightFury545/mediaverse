@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Services\Files\FileService;
+use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -22,6 +23,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        Broadcast::routes(['middleware' => ['auth']]);
+
+        require base_path('routes/channels.php');
     }
 }

@@ -6,20 +6,18 @@ use App\Http\Controllers\Controller;
 use App\Services\Auth\OAuth2Service;
 use Exception;
 use Illuminate\Http\JsonResponse;
+use Symfony\Component\HttpFoundation\RedirectResponse;
 
 class OAuth2Controller extends Controller
 {
-    protected OAuth2Service $oAuth2Service;
-
-    public function __construct(OAuth2Service $oAuth2Service)
+    public function __construct(protected OAuth2Service $oAuth2Service)
     {
-        $this->oAuth2Service = $oAuth2Service;
     }
 
     /**
      * Перенаправлення на Google для авторизації.
      */
-    public function redirectToGoogle()
+    public function redirectToGoogle(): RedirectResponse|\Illuminate\Http\RedirectResponse
     {
         return $this->oAuth2Service->redirectToGoogle();
     }
@@ -30,12 +28,12 @@ class OAuth2Controller extends Controller
     public function handleGoogleCallback(): JsonResponse
     {
         try {
-            $token = $this->oAuth2Service->handleGoogleCallback();
+            $tokens = $this->oAuth2Service->handleGoogleCallback();
 
             return response()->json([
                 'message' => 'Successfully authenticated with Google.',
-                'token' => $token,
-            ]);
+                'access_token' => $tokens['access_token'],
+            ])->cookie('refresh_token', $tokens['refresh_token'], 20160, null, null, false, true);
         } catch (Exception $e) {
             return response()->json([
                 'error' => $e->getMessage(),
@@ -46,7 +44,7 @@ class OAuth2Controller extends Controller
     /**
      * Перенаправлення на GitHub для авторизації.
      */
-    public function redirectToGitHub()
+    public function redirectToGitHub(): RedirectResponse|\Illuminate\Http\RedirectResponse
     {
         return $this->oAuth2Service->redirectToGitHub();
     }
@@ -57,12 +55,12 @@ class OAuth2Controller extends Controller
     public function handleGitHubCallback(): JsonResponse
     {
         try {
-            $token = $this->oAuth2Service->handleGitHubCallback();
+            $tokens = $this->oAuth2Service->handleGitHubCallback();
 
             return response()->json([
                 'message' => 'Successfully authenticated with GitHub.',
-                'token' => $token,
-            ]);
+                'access_token' => $tokens['access_token'],
+            ])->cookie('refresh_token', $tokens['refresh_token'], 20160, null, null, false, true);
         } catch (Exception $e) {
             return response()->json([
                 'error' => $e->getMessage(),

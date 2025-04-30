@@ -26,7 +26,13 @@ class GetChatsAction
             $this->applyFilters($query);
             $this->applySorting($query);
 
-            return $query->paginate($perPage);
+            if (!request()->has('sort')) {
+                $query->orderByDesc('last_message_at');
+            }
+
+            return $query
+                ->cursorPaginate($perPage)
+                ->withQueryString();
         } catch (Exception $e) {
             throw new Exception('Помилка під час отримання чатів: ' . $e->getMessage());
         }

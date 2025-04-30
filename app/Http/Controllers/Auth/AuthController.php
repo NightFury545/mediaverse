@@ -28,7 +28,7 @@ class AuthController extends Controller
         try {
             $validatedData = $request->validated();
 
-            $tokens = $this->authService->register(
+            $data = $this->authService->register(
                 $validatedData['username'],
                 $validatedData['email'],
                 $validatedData['password']
@@ -36,9 +36,9 @@ class AuthController extends Controller
 
             return response()->json([
                 'message' => __('auth.register_success'),
-                'access_token' => $tokens['access_token'],
-                'refresh_token' => $tokens['refresh_token'],
-            ], 201);
+                'access_token' => $data['access_token'],
+                'user' => $data['user']
+            ], 201)->cookie('refresh_token', $data['refresh_token'], 20160, null, null, false, true);
         } catch (Exception $e) {
             return response()->json(['error' => $e->getMessage()], 400);
         }
@@ -56,18 +56,18 @@ class AuthController extends Controller
         try {
             $validatedData = $request->validated();
 
-            $tokens = $this->authService->login(
+            $data = $this->authService->login(
                 $validatedData['email'],
                 $validatedData['password']
             );
 
             return response()->json([
                 'message' => __('auth.login_success'),
-                'access_token' => $tokens['access_token'],
-                'refresh_token' => $tokens['refresh_token'],
-            ]);
+                'access_token' => $data['access_token'],
+                'user' => $data['user'],
+            ])->cookie('refresh_token', $data['refresh_token'], 20160, null, null, false, true);
         } catch (Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 401);
+            return response()->json(['error' => $e->getMessage()], 400);
         }
     }
 
@@ -81,7 +81,8 @@ class AuthController extends Controller
         try {
             $this->authService->logout();
 
-            return response()->json(['message' => __('auth.logout_success')]);
+            return response()->json(['message' => __('auth.logout_success')])
+                ->withoutCookie('refresh_token');
         } catch (Exception $e) {
             return response()->json(['error' => __('auth.logout_failed') . ': ' . $e->getMessage()], 400);
         }
@@ -96,16 +97,16 @@ class AuthController extends Controller
     public function refreshToken(Request $request): JsonResponse
     {
         try {
-            $token = $request->bearerToken();
+            $refreshToken = $request->cookie('refresh_token');
 
-            if (!$token) {
+            if (!$refreshToken) {
                 return response()->json(['error' => __('auth.token_required')], 400);
             }
 
-            $newToken = $this->authService->refreshToken($token);
+            $newToken = $this->authService->refreshToken($refreshToken);
 
             return response()->json([
-                'token' => $newToken,
+                'access_token' => $newToken,
                 'message' => __('auth.token_refreshed')
             ]);
         } catch (Exception $e) {

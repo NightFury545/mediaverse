@@ -14,8 +14,8 @@ return new class extends Migration
     {
         Schema::create('user_blocks', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
-            $table->foreignId('blocked_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignUuid('user_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignUuid('blocked_id')->constrained('users')->cascadeOnDelete();
             $table->enum('reason', BlockReason::getValues())->default(BlockReason::OTHER->value);
             $table->timestamps();
             $table->unique(['user_id', 'blocked_id']);

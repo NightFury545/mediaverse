@@ -48,14 +48,14 @@ class GetCommentsAction
      */
     private function applyFilters(MorphMany $query): QueryBuilder
     {
-        return QueryBuilder::for($query)
-            ->allowedFilters([
-                AllowedFilter::exact('user_id'),
-                AllowedFilter::exact('parent_id'),
-                AllowedFilter::partial('content'),
-                AllowedFilter::custom('created_at', new RangeFilter()),
-                AllowedFilter::custom('likes_count', new RangeFilter()),
-            ]);
+        return QueryBuilder::for(
+            $query->whereNull('parent_id')
+        )->allowedFilters([
+            AllowedFilter::exact('user_id'),
+            AllowedFilter::partial('content'),
+            AllowedFilter::custom('created_at', new RangeFilter()),
+            AllowedFilter::custom('likes_count', new RangeFilter()),
+        ]);
     }
 
     /**

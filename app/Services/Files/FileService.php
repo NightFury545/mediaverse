@@ -2,9 +2,11 @@
 
 namespace App\Services\Files;
 
+use App\Enums\FileExtension;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Intervention\Image\Image;
 
 class FileService
 {
@@ -18,6 +20,10 @@ class FileService
      */
     public function saveFile(UploadedFile $file, string $folder = 'attachments', string $disk = 'public'): string
     {
+        if (in_array($file->getClientOriginalExtension(), FileExtension::getImageExtensions())) {
+            $file = $this->convertToWebp($file);
+        }
+
         $fileName = Str::uuid() . '.' . $file->getClientOriginalExtension();
         $path = Storage::disk($disk)->putFileAs($folder, $file, $fileName);
 
@@ -52,5 +58,28 @@ class FileService
     public function deleteFile(string $filePath, string $disk = 'public'): void
     {
         Storage::disk($disk)->delete($filePath);
+    }
+
+    /**
+     * Конвертувати зображення у WebP.
+     *
+     * @param UploadedFile $file
+     * @param int $quality
+     * @return UploadedFile
+     */
+    protected function convertToWebp(UploadedFile $file, int $quality = 90): UploadedFile
+    {
+        $image = Image::make($file->getPathname())->encode('webp', $quality);
+
+        $tmpPath = tempnam(sys_get_temp_dir(), 'webp_') . '.webp';
+        $image->save($tmpPath);
+
+        return new UploadedFile(
+            $tmpPath,
+            pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME) . '.webp',
+            'image/webp',
+            null,
+            true
+        );
     }
 }

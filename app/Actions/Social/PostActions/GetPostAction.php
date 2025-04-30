@@ -2,6 +2,7 @@
 
 namespace App\Actions\Social\PostActions;
 
+use App\Enums\PostVisibility;
 use App\Models\Post;
 use App\Models\PostView;
 use Exception;
@@ -21,7 +22,13 @@ class GetPostAction
         try {
             $post = $this->findPostByIdentifier($identifier);
 
-            if ($post && auth()->check()) {
+            if (!$post) {
+                return null;
+            }
+
+            $this->checkVisibility($post);
+
+            if (auth()->check()) {
                 $this->handlePostView($post);
             }
 
@@ -94,5 +101,30 @@ class GetPostAction
             'user_id' => $userId,
             'viewed_at' => now(),
         ]);
+    }
+
+    /**
+     * Перевіряє доступ користувача до перегляду поста згідно з його видимістю.
+     *
+     * @param Post $post
+     * @throws Exception Якщо користувач не має доступу до поста
+     */
+    private function checkVisibility(Post $post): void
+    {
+        $user = auth()->user();
+
+        switch ($post->visibility) {
+            case PostVisibility::PRIVATE->value:
+                if (!$user || $post->user_id !== $user->id) {
+                    throw new Exception('Цей пост доступний лише власнику.');
+                }
+                break;
+
+            case PostVisibility::FRIENDS->value:
+                if (!$user || ($post->user_id !== $user->id && !$user->isFriendWith($post->user_id))) {
+                    throw new Exception('Цей пост доступний лише друзям автора.');
+                }
+                break;
+        }
     }
 }

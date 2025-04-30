@@ -30,13 +30,13 @@ class AuthService
     {
         DB::beginTransaction();
         try {
-            $user = new User([
+            $user = User::create([
                 'username' => $username,
                 'email' => $email,
                 'password' => Hash::make($password),
             ]);
 
-            if (!$user->save()) {
+            if (!$user) {
                 throw new Exception(__('auth.user_save_failed'));
             }
 
@@ -52,6 +52,7 @@ class AuthService
             return [
                 'access_token' => $accessToken,
                 'refresh_token' => $refreshToken,
+                'user' => $user->fresh(),
             ];
         } catch (Exception $e) {
             DB::rollBack();
@@ -85,6 +86,7 @@ class AuthService
             return [
                 'access_token' => $accessToken,
                 'refresh_token' => $refreshToken,
+                'user' => $user,
             ];
         } catch (Exception $e) {
             throw new Exception('Помилка під час входу в обліковий запис: ' . $e->getMessage());
