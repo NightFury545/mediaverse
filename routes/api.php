@@ -16,3 +16,5 @@ require base_path('routes/api/social/post-view.php');
 require base_path('routes/api/social/tag.php');
 require base_path('routes/api/social/user-block.php');
 require base_path('routes/api/social/user-status.php');
+require base_path('routes/api/social/like.php');
+require base_path('routes/api/social/notification.php');

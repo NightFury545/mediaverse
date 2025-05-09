@@ -27,6 +27,8 @@ class UpdatePostRequest extends FormRequest
         return [
             'title' => 'required|string|max:36',
             'content' => 'required|string|max:564',
+            'tags' => 'nullable|array',
+            'tags.*' => 'string|min:2|max:24',
             'attachments' => 'nullable|array',
             'attachments.*' => ['file', Rule::in($allowedExtensions), 'max:20480'],
             'visibility' => ['nullable', Rule::in(PostVisibility::getValues())],

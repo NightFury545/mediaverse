@@ -10,25 +10,35 @@ use App\Models\Movie;
 use App\Models\Post;
 use App\Services\Social\CommentService;
 use Exception;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response as ResponseCode;
 
 class CommentController extends Controller
 {
+
+    use AuthorizesRequests;
+
     public function __construct(protected CommentService $commentService)
     {
     }
 
     /**
      * Створює новий коментар для поста або фільму.
+     *
+     * @throws AuthorizationException
      */
     public function store(CreateCommentRequest $request, Movie|Post $commentable): JsonResponse
     {
+        $this->authorize('create', Comment::class);
+
         try {
             $comment = $this->commentService->create($request->validated(), $commentable);
 
-            return response()->json(['message' => 'Коментар успішно створено', 'comment' => $comment], ResponseCode::HTTP_CREATED);
+            return response()->json(['message' => 'Коментар успішно створено', 'comment' => $comment],
+                ResponseCode::HTTP_CREATED);
         } catch (Exception $e) {
             return response()->json(['error' => $e->getMessage()], ResponseCode::HTTP_BAD_REQUEST);
         }
@@ -68,9 +78,13 @@ class CommentController extends Controller
 
     /**
      * Оновлює коментар.
+     *
+     * @throws AuthorizationException
      */
     public function update(UpdateCommentRequest $request, Comment $comment): JsonResponse
     {
+        $this->authorize('update', $comment);
+
         try {
             $updatedComment = $this->commentService->update($comment, $request->validated());
 
@@ -82,9 +96,13 @@ class CommentController extends Controller
 
     /**
      * Видаляє коментар.
-     */
+     *
+     * @throws AuthorizationException
+*/
     public function destroy(Comment $comment): JsonResponse
     {
+        $this->authorize('delete', $comment);
+
         try {
             $this->commentService->delete($comment);
 

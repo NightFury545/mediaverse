@@ -11,3 +11,5 @@ export { default as userUrls } from './userUrls';
 export { default as userBlockUrls } from './userBlockUrls';
 export { default as emailUrls } from './emailUrls';
 export { default as userStatusUrls } from './userStatusUrls.js';
+export { default as likeUrls } from './likeUrls.js';
+export { default as notificationUrls } from './notificationUrls.js';

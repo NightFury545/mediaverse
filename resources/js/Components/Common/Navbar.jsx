@@ -15,13 +15,13 @@ import ChatIcon from "@mui/icons-material/Chat";
 import PostIcon from "@mui/icons-material/PostAdd";
 import CommentIcon from "@mui/icons-material/Comment";
 import WhatshotIcon from "@mui/icons-material/Whatshot";
-import TheatersIcon from "@mui/icons-material/Theaters";
 import CategoryIcon from "@mui/icons-material/Category";
 import ExpandLess from "@mui/icons-material/ExpandLess";
 import ExpandMore from "@mui/icons-material/ExpandMore";
 import { useAuth } from "@/Components/Auth/AuthProvider.jsx";
 import UserMenu from "@/Components/Social/UserMenu.jsx";
 import { useAuthModal } from "@/Components/Auth/AuthModalProvider.jsx";
+import NotificationsBell from "@/Components/Social/NotificationsBell.jsx";
 
 const Navbar = () => {
     const navigate = useNavigate();
@@ -470,7 +470,7 @@ const Navbar = () => {
                                 boxShadow: "0 0 10px rgba(156, 39, 176, 0.3)"
                             }
                         }}>
-                            <NotificationsIcon />
+                            <NotificationsBell />
                         </IconButton>
 
                         <UserMenu onSignInClick={handleSignInOpen} />

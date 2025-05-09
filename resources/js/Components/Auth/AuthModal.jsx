@@ -25,6 +25,7 @@ import {useAuth} from '@/Components/Auth/AuthProvider.jsx';
 import {emailActions} from "@/api/actions/index.js";
 import {toast} from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import {authUrls} from "@/api/urls/index.js";
 
 const validationSchema = Yup.object({
     username: Yup.string().when('isSignUp', {
@@ -119,7 +120,7 @@ const AuthModal = ({open, handleClose, isSignUp = false}) => {
 
     const handleSocialLogin = (provider) => {
         if (isLoading) return;
-        window.location.href = `/api/auth/${provider}`;
+        window.location.href = authUrls.oAuth2Redirect(provider);
     };
 
     return (

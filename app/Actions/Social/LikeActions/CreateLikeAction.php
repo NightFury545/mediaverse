@@ -3,6 +3,7 @@
 namespace App\Actions\Social\LikeActions;
 
 use App\Enums\NotificationType;
+use App\Models\Comment;
 use App\Models\Like;
 use App\Models\Movie;
 use App\Models\Post;
@@ -13,17 +14,18 @@ use Exception;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Schema;
 
 class CreateLikeAction
 {
     /**
      * Додає лайк до сутності (посту, фільму тощо), якщо ще не додано.
      *
-     * @param Post|Movie $likeable
+     * @param Post|Movie|Comment $likeable
      * @return Like
      * @throws Exception
      */
-    public function __invoke(Post|Movie $likeable): Like
+    public function __invoke(Post|Movie|Comment $likeable): Like
     {
         DB::beginTransaction();
 
@@ -40,6 +42,8 @@ class CreateLikeAction
                 'user_id' => Auth::id(),
             ]);
 
+            $this->incrementLikesCountIfApplicable($likeable);
+
             $this->sendLikeNotificationIfEnabled($likeable, $like);
 
             DB::commit();
@@ -52,6 +56,19 @@ class CreateLikeAction
     }
 
     /**
+     * Збільшує лічильник likes_count у моделі, якщо такий стовпець існує.
+     *
+     * @param Post|Movie|Comment $likeable
+     * @return void
+     */
+    private function incrementLikesCountIfApplicable(Post|Movie|Comment $likeable): void
+    {
+        if (Schema::hasColumn($likeable->getTable(), 'likes_count')) {
+            $likeable->increment('likes_count');
+        }
+    }
+
+    /**
      * Перевіряє, чи можна поставити лайк (в залежності від стану сутності).
      *
      * @param Post|Movie $likeable
@@ -59,11 +76,11 @@ class CreateLikeAction
      */
     private function ensureCanBeLiked(Post|Movie $likeable): void
     {
-        if (property_exists($likeable, 'likes_enabled') && !$likeable->likes_enabled) {
+        if (Schema::hasColumn($likeable->getTable(), 'likes_enabled') && !$likeable->likes_enabled) {
             throw new Exception('Лайки вимкнені для цієї сутності.');
         }
 
-        if (property_exists($likeable, 'visibility')) {
+        if (Schema::hasColumn($likeable->getTable(), 'visibility')) {
             $this->checkVisibility($likeable);
         }
     }
@@ -78,7 +95,7 @@ class CreateLikeAction
     {
         $user = Auth::user();
 
-        if (!property_exists($likeable, 'user_id')) {
+        if (!Schema::hasColumn($likeable->getTable(), 'user_id')) {
             return;
         }
 
@@ -119,7 +136,7 @@ class CreateLikeAction
      */
     private function sendLikeNotificationIfEnabled(Post|Movie $likeable, Like $like): void
     {
-        if (!property_exists($likeable, 'user_id')) {
+        if (!Schema::hasColumn($likeable->getTable(), 'user_id')) {
             return;
         }
 

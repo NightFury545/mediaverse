@@ -1,6 +1,7 @@
 import Echo from 'laravel-echo';
-
 import Pusher from 'pusher-js';
+import echoAxios from "@/config/echoAxios.js";
+
 window.Pusher = Pusher;
 
 window.Echo = new Echo({
@@ -17,5 +18,22 @@ window.Echo = new Echo({
             'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
             Accept: 'application/json',
         },
+    },
+    authorizer: (channel, options) => {
+        return {
+            authorize: (socketId, callback) => {
+                echoAxios
+                    .post('/broadcasting/auth', {
+                        socket_id: socketId,
+                        channel_name: channel.name,
+                    })
+                    .then((response) => {
+                        callback(null, response.data);
+                    })
+                    .catch((error) => {
+                        callback(error);
+                    });
+            },
+        };
     },
 });

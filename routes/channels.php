@@ -17,3 +17,7 @@ Broadcast::channel('notifications.{userId}', function (User $user, $userId) {
 Broadcast::channel('chats.user.{userId}', function (User $user, $userId) {
     return $user->id === $userId;
 });
+
+Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
+    return $user->id === $id;
+});

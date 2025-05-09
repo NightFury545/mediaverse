@@ -22,7 +22,7 @@ class LikePolicy
      */
     public function view(User $user, Like $like): bool
     {
-        return $user->id === $like->user()->id;
+        return $user->id === $like->user_id;
     }
 
     /**
@@ -46,6 +46,6 @@ class LikePolicy
      */
     public function delete(User $user, Like $like): bool
     {
-        return false;
+        return $user->id === $like->user_id;
     }
 }

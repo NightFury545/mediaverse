@@ -9,7 +9,7 @@ use App\Actions\Social\PostActions\GetPostsAction;
 use App\Actions\Social\PostActions\RecommendPostsAction;
 use App\Actions\Social\PostActions\UpdatePostAction;
 use App\Models\Post;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\CursorPaginator;
 
 class PostService
 {
@@ -43,7 +43,7 @@ class PostService
         return ($this->getPostAction)($identifier);
     }
 
-    public function getPosts(int $perPage = 20): LengthAwarePaginator
+    public function getPosts(int $perPage = 10): CursorPaginator
     {
         return ($this->getPostsAction)($perPage);
     }

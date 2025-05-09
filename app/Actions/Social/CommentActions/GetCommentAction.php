@@ -9,6 +9,7 @@ use App\Models\Post;
 use App\Models\User;
 use Exception;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 
 class GetCommentAction
 {
@@ -53,7 +54,7 @@ class GetCommentAction
 
         $commentable = $comment->commentable;
 
-        if (!property_exists($commentable, 'visibility') || !property_exists($commentable, 'user_id')) {
+        if (!Schema::hasColumn($commentable->getTable(), 'visibility') || !Schema::hasColumn($commentable->getTable(), 'user_id')) {
             return;
         }
 

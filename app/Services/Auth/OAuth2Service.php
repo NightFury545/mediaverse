@@ -3,10 +3,12 @@
 namespace App\Services\Auth;
 
 use App\Models\User;
+use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
 use Symfony\Component\HttpFoundation\RedirectResponse;
+use voku\helper\ASCII;
 
 class OAuth2Service
 {
@@ -19,7 +21,7 @@ class OAuth2Service
      */
     public function redirectToGoogle(): RedirectResponse|\Illuminate\Http\RedirectResponse
     {
-        return Socialite::driver('google')->redirect();
+        return Socialite::driver('google')->stateless()->redirect();
     }
 
     /**
@@ -30,7 +32,7 @@ class OAuth2Service
     public function handleGoogleCallback(): array
     {
         try {
-            $googleUser = Socialite::driver('google')->user();
+            $googleUser = Socialite::driver('google')->stateless()->user();
         } catch (Exception $e) {
             throw new Exception(__('auth.google_data_failed'));
         }
@@ -52,7 +54,7 @@ class OAuth2Service
      */
     public function redirectToGitHub(): RedirectResponse|\Illuminate\Http\RedirectResponse
     {
-        return Socialite::driver('github')->redirect();
+        return Socialite::driver('github')->stateless()->redirect();
     }
 
     /**
@@ -63,7 +65,7 @@ class OAuth2Service
     public function handleGitHubCallback(): array
     {
         try {
-            $gitHubUser = Socialite::driver('github')->user();
+            $gitHubUser = Socialite::driver('github')->stateless()->user();
         } catch (Exception $e) {
             throw new Exception(__('auth.github_data_failed'));
         }
@@ -95,16 +97,93 @@ class OAuth2Service
                     $provider . '_id' => $socialUser->getId(),
                 ]);
             } else {
+                $username = $this->getUsernameFromSocialUser($socialUser, $provider);
+
+                if (!$username) {
+                    $username = $this->generateUniqueUsername($socialUser->getName());
+                }
+
                 $user = User::create([
-                    'username' => $socialUser->getName(),
+                    'username' => $username,
                     'email' => $socialUser->getEmail(),
                     'avatar' => $socialUser->getAvatar() ?? asset('storage/avatars/default-avatar.png'),
                     $provider . '_id' => $socialUser->getId(),
                     'password' => bcrypt(Str::random(16)),
                 ]);
+
+                $user->markEmailAsVerified();
             }
         }
 
         return $user;
+    }
+
+    /**
+     * Отримує username від соціального провайдера, якщо доступний.
+     *
+     * @param mixed $socialUser
+     * @param string $provider
+     * @return string|null
+     */
+    private function getUsernameFromSocialUser(mixed $socialUser, string $provider): ?string
+    {
+        switch ($provider) {
+            case 'github':
+                $username = $socialUser->getNickname();
+                return $username ? $this->ensureUniqueUsername($username) : null;
+            default:
+                return null;
+        }
+    }
+
+    /**
+     * Генерує унікальний username на основі імені.
+     *
+     * @param string $name
+     * @return string
+     */
+    private function generateUniqueUsername(string $name): string
+    {
+        $baseUsername = ASCII::to_ascii($name);
+        $baseUsername = Str::slug($baseUsername, '');
+        $baseUsername = strtolower($baseUsername);
+
+        if (empty($baseUsername)) {
+            $baseUsername = 'user';
+        }
+
+        if (!User::where('username', $baseUsername)->exists()) {
+            return $baseUsername;
+        }
+
+        do {
+            $randomDigits = rand(100, 999);
+            $username = $baseUsername . $randomDigits;
+        } while (User::where('username', $username)->exists());
+
+        return $username;
+    }
+
+    /**
+     * Забезпечує унікальність username, додаючи цифри при необхідності.
+     *
+     * @param string $username
+     * @return string
+     */
+    private function ensureUniqueUsername(string $username): string
+    {
+        $baseUsername = Str::slug($username, '');
+        $baseUsername = strtolower($baseUsername);
+
+        if (!User::where('username', $baseUsername)->exists()) {
+            return $baseUsername;
+        }
+
+        do {
+            $randomDigits = rand(100, 999);
+            $newUsername = $baseUsername . $randomDigits;
+        } while (User::where('username', $newUsername)->exists());
+
+        return $newUsername;
     }
 }

@@ -6,11 +6,7 @@ const authUrls = {
     logout: `${BASE_URL}/logout`,
     refreshToken: `${BASE_URL}/refresh-token`,
 
-    googleRedirect: `${BASE_URL}/google`,
-    googleCallback: `${BASE_URL}/google/callback`,
-
-    githubRedirect: `${BASE_URL}/github`,
-    githubCallback: `${BASE_URL}/github/callback`,
+    oAuth2Redirect: (provider) => `/api${BASE_URL}/${provider}`,
 };
 
 export default authUrls;

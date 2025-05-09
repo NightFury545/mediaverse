@@ -79,8 +79,6 @@ class UserController extends Controller
         $this->authorize('update', $user);
 
         try {
-            $data = $request->all();
-
             $updatedUser = $this->userService->update($user, $request->validated());
 
             return response()->json([

@@ -11,12 +11,18 @@ export const AuthProvider = ({ children }) => {
     const isAuthenticated = useMemo(() => !!user, [user]);
 
     useEffect(() => {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+            setUser(JSON.parse(storedUser));
+        }
         const fetchUser = async () => {
             try {
                 const response = await userActions.getMe();
                 setUser(response.data);
+                localStorage.setItem('user', JSON.stringify(response.data));
             } catch (error) {
                 setUser(null);
+                localStorage.removeItem('user');
             } finally {
                 setLoading(false);
             }
@@ -27,17 +33,19 @@ export const AuthProvider = ({ children }) => {
 
     const login = async (credentials) => {
         const response = await authActions.login(credentials);
-        const accessToken = response.data.access_token;
-        localStorage.setItem('access_token', accessToken);
-        setUser(response.data.user);
+        const { access_token, user } = response.data;
+        localStorage.setItem('access_token', access_token);
+        localStorage.setItem('user', JSON.stringify(user));
+        setUser(user);
     };
 
     const logout = async () => {
         await userStatusActions.setUserOffline();
         await authActions.logout();
         localStorage.removeItem('access_token');
+        localStorage.removeItem('user');
         setUser(null);
-        navigate('/');
+        window.location.href = '/';
     };
 
     const register = async (userData) => {

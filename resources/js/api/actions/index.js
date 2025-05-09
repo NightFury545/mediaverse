@@ -10,3 +10,5 @@ export { default as userActions } from './userActions';
 export { default as userBlockActions } from './userBlockActions';
 export { default as emailActions } from './emailActions'
 export { default as userStatusActions } from './userStatusActions.js'
+export { default as likeActions } from './likeActions.js'
+export { default as notificationActions } from './notificationActions.js'

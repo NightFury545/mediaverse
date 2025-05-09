@@ -4,11 +4,10 @@ namespace App\Events\Social\User;
 
 use App\Models\User;
 use Illuminate\Broadcasting\Channel;
-use Illuminate\Broadcasting\PresenceChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Queue\SerializesModels;
 
-class UserOnlineEvent implements ShouldBroadcast
+class UserOnlineEvent implements ShouldBroadcastNow
 {
     use SerializesModels;
 

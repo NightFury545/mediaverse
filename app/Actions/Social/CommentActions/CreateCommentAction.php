@@ -12,6 +12,7 @@ use App\Notifications\Social\Post\PostCommentedNotification;
 use Exception;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class CreateCommentAction
 {
@@ -58,11 +59,11 @@ class CreateCommentAction
      */
     private function ensureCanReceiveComments(Movie|Post $commentable): void
     {
-        if (property_exists($commentable, 'comments_enabled') && !$commentable->comments_enabled) {
+        if (Schema::hasColumn($commentable->getTable(), 'comments_enabled') && !$commentable->comments_enabled) {
             throw new Exception('Коментарі вимкнені.');
         }
 
-        if (property_exists($commentable, 'visibility')) {
+        if (Schema::hasColumn($commentable->getTable(), 'visibility')) {
             $this->checkVisibility($commentable);
         }
     }
@@ -78,7 +79,7 @@ class CreateCommentAction
         /** @var User $user */
         $user = Auth::user();
 
-        if (!property_exists($commentable, 'user_id')) {
+        if (!Schema::hasColumn($commentable->getTable(), 'user_id')) {
             return;
         }
 
@@ -121,7 +122,7 @@ class CreateCommentAction
      */
     private function sendCommentNotificationIfEnabled(Movie|Post $commentable, Comment $comment): void
     {
-        if (!property_exists($commentable, 'user_id')) {
+        if (!Schema::hasColumn($commentable->getTable(), 'user_id')) {
             return;
         }
 

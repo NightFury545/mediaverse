@@ -6,6 +6,7 @@ use App\Models\Comment;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Schema;
 use Spatie\QueryBuilder\QueryBuilder;
 use Spatie\QueryBuilder\AllowedFilter;
 use App\Actions\Filters\RangeFilter;
@@ -72,7 +73,7 @@ class GetCommentRepliesAction
 
         $commentable = $comment->commentable;
 
-        if (!property_exists($commentable, 'visibility') || !property_exists($commentable, 'user_id')) {
+        if (!Schema::hasColumn($commentable->getTable(), 'visibility') || !Schema::hasColumn($commentable->getTable(), 'user_id')) {
             return;
         }
 

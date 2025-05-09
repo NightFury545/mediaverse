@@ -5,9 +5,9 @@ namespace App\Actions\Social\PostActions;
 use App\Actions\Filters\RangeFilter;
 use App\Models\Post;
 use Exception;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Spatie\QueryBuilder\QueryBuilder;
+use Illuminate\Pagination\CursorPaginator;
 use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\QueryBuilder;
 
 class GetPostsAction
 {
@@ -17,10 +17,10 @@ class GetPostsAction
      * Пагінація дозволяє обмежити кількість постів на сторінці.
      *
      * @param int $perPage Кількість постів на сторінці (за замовчуванням 20)
-     * @return LengthAwarePaginator Сторінковий результат з постами
+     * @return CursorPaginator Сторінковий результат з постами
      * @throws Exception Якщо виникла помилка під час виконання запиту
      */
-    public function __invoke(int $perPage = 20): LengthAwarePaginator
+    public function __invoke(int $perPage = 10): CursorPaginator
     {
         try {
             $query = $this->buildBaseQuery();
@@ -31,7 +31,7 @@ class GetPostsAction
 
             $this->applySorting($query);
 
-            return $query->paginate($perPage);
+            return $query->cursorPaginate($perPage)->withQueryString();
         } catch (Exception $e) {
             throw new Exception('Помилка під час отримання постів: ' . $e->getMessage());
         }
@@ -58,7 +58,7 @@ class GetPostsAction
     private function applyFilters(QueryBuilder $query): void
     {
         $query->allowedFilters([
-            AllowedFilter::exact('user_id'),
+            AllowedFilter::partial('user.username'),
             AllowedFilter::exact('visibility'),
             AllowedFilter::exact('comments_enabled'),
             AllowedFilter::partial('title'),
@@ -70,8 +70,8 @@ class GetPostsAction
             AllowedFilter::custom('created_at', new RangeFilter()),
             AllowedFilter::callback('tags', function ($query, $value) {
                 $query->whereHas('tags', function ($tagQuery) use ($value) {
-                    $tagQuery->whereIn('tags.name', (array) $value)
-                        ->orWhereIn('tags.slug', (array) $value);
+                    $tagQuery->whereIn('tags.name', (array)$value)
+                        ->orWhereIn('tags.slug', (array)$value);
                 });
             }),
         ]);

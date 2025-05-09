@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Services\Auth\OAuth2Service;
 use Exception;
+use Illuminate\Foundation\Application;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Routing\Redirector;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 
 class OAuth2Controller extends Controller
@@ -25,19 +27,17 @@ class OAuth2Controller extends Controller
     /**
      * Callback після авторизації через Google.
      */
-    public function handleGoogleCallback(): JsonResponse
+    public function handleGoogleCallback(): Application|\Illuminate\Http\RedirectResponse|Redirector
     {
         try {
             $tokens = $this->oAuth2Service->handleGoogleCallback();
 
-            return response()->json([
-                'message' => 'Successfully authenticated with Google.',
-                'access_token' => $tokens['access_token'],
-            ])->cookie('refresh_token', $tokens['refresh_token'], 20160, null, null, false, true);
+            return redirect('/')
+                ->with('success', 'Successfully authenticated with Google.')
+                ->cookie('refresh_token', $tokens['refresh_token'], 20160, null, null, false, true);
         } catch (Exception $e) {
-            return response()->json([
-                'error' => $e->getMessage(),
-            ], 400);
+            return redirect('/')
+                ->with('error', $e->getMessage());
         }
     }
 
@@ -52,19 +52,17 @@ class OAuth2Controller extends Controller
     /**
      * Callback після авторизації через GitHub.
      */
-    public function handleGitHubCallback(): JsonResponse
+    public function handleGitHubCallback(): Application|\Illuminate\Http\RedirectResponse|Redirector
     {
         try {
             $tokens = $this->oAuth2Service->handleGitHubCallback();
 
-            return response()->json([
-                'message' => 'Successfully authenticated with GitHub.',
-                'access_token' => $tokens['access_token'],
-            ])->cookie('refresh_token', $tokens['refresh_token'], 20160, null, null, false, true);
+            return redirect('/')
+                ->with('success', 'Successfully authenticated with GitHub.')
+                ->cookie('refresh_token', $tokens['refresh_token'], 20160, null, null, false, true);
         } catch (Exception $e) {
-            return response()->json([
-                'error' => $e->getMessage(),
-            ], 400);
+            return redirect('/')
+                ->with('error', $e->getMessage());
         }
     }
 }

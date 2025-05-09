@@ -5,6 +5,7 @@ namespace App\Notifications\Social\Post;
 use App\Models\Like;
 use App\Models\Post;
 use App\Models\User;
+use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -50,8 +51,8 @@ class PostLikedNotification extends Notification implements ShouldQueue
         return (new MailMessage)
             ->subject('Ваш пост отримав вподобання')
             ->greeting("Привіт, {$notifiable->username}!")
-            ->line("{$this->liker->username} вподобав ваш пост.")
-            ->action('Переглянути пост', url("/posts/{$this->post->id}"))
+            ->line("Користувач {$this->liker->username} вподобав ваш пост.")
+            ->action('Переглянути пост', route('posts.show', ['identifier' => $this->post->slug]))
             ->line('Дякуємо, що ділитеся своїми думками з іншими!');
     }
 
@@ -63,11 +64,7 @@ class PostLikedNotification extends Notification implements ShouldQueue
      */
     public function toDatabase(object $notifiable): array
     {
-        return [
-            'post_id' => $this->post->id,
-            'liker_id' => $this->liker->id,
-            'liker_username' => $this->liker->username,
-        ];
+        return $this->getNotificationData();
     }
 
     /**
@@ -78,10 +75,35 @@ class PostLikedNotification extends Notification implements ShouldQueue
      */
     public function toBroadcast(object $notifiable): array
     {
+        return $this->getNotificationData();
+    }
+
+    /**
+     * Отримує дані сповіщення для бази даних та трансляції.
+     *
+     * @return array
+     */
+    protected function getNotificationData(): array
+    {
         return [
+            'message' => "Користувач <a href=\"" . route('users.show', ['identifier' => $this->liker->username]
+                ) . "\">{$this->liker->username}</a> вподобав ваш <a href=\"" . route(
+                    'posts.show',
+                    ['identifier' => $this->post->slug]
+                ) . "\">пост</a>.",
             'post_id' => $this->post->id,
             'liker_id' => $this->liker->id,
-            'liker_username' => $this->liker->username,
+            'type' => 'like',
         ];
+    }
+
+    /**
+     * Визначає канали для трансляції сповіщення.
+     *
+     * @return array
+     */
+    public function broadcastOn(): array
+    {
+        return [new PrivateChannel('notifications.' . $this->post->user_id)];
     }
 }

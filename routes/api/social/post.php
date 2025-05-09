@@ -11,5 +11,5 @@ Route::prefix('posts')->middleware(['auth', 'verified'])->group(function () {
 
 Route::prefix('posts')->group(function () {
     Route::get('/', [PostController::class, 'index'])->name('posts.index');
-    Route::get('/{post}', [PostController::class, 'show'])->name('posts.show');
+    Route::get('/{identifier}', [PostController::class, 'show'])->name('posts.show');
 });
