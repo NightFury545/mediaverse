@@ -14,7 +14,8 @@ import {
     Button,
     Drawer,
     useMediaQuery,
-    useTheme, Chip
+    useTheme,
+    Chip
 } from '@mui/material';
 import {
     KeyboardArrowUp,
@@ -25,10 +26,12 @@ import {
     PostAdd,
     SentimentDissatisfied
 } from '@mui/icons-material';
+import { Link } from 'react-router-dom';
 import PostCard from '@/Components/Social/PostCard.jsx';
 import PostsFilter from '@/Components/Social/PostsFilter.jsx';
-import {likeActions, postActions} from '@/api/actions';
-import {useAuth} from "@/Components/Auth/AuthProvider.jsx";
+import { likeActions, postActions } from '@/api/actions';
+import { useAuth } from "@/Components/Auth/AuthProvider.jsx";
+import InlinePostCard from "@/Components/Social/InlinePostCard.jsx";
 
 const fetchPosts = async ({ pageParam = null, query = '' }) => {
     const response = pageParam
@@ -42,7 +45,7 @@ const fetchPosts = async ({ pageParam = null, query = '' }) => {
             content: post.content,
             user: {
                 id: post.user?.id,
-                name: post.user?.username || 'Anonymous',
+                username: post.user?.username || 'Anonymous',
                 avatar: post.user?.avatar || `https://i.pravatar.cc/150?img=${post.user?.id || 0}`
             },
             attachments: post.attachments || [],
@@ -74,9 +77,11 @@ const fetchTopPosts = async () => {
         posts: response.data.data.map((post) => ({
             id: post.id,
             title: post.title,
+            slug: post.slug,
             tags: post.tags || [],
             likes_count: post.likes_count || 0,
-            comments_count: post.comments_count || 0
+            comments_count: post.comments_count || 0,
+            attachments: post.attachments || []
         })),
         totalPosts: response.data.data.length
     };
@@ -112,6 +117,8 @@ const EmptyPostsPlaceholder = () => (
             <Button
                 variant="contained"
                 startIcon={<PostAdd />}
+                component={Link}
+                to="/posts/create"
                 sx={{
                     bgcolor: '#9c27b0',
                     marginTop: '16px',
@@ -160,6 +167,7 @@ const PostsPage = () => {
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'lg'));
     const isDesktop = useMediaQuery(theme.breakpoints.up('lg'));
+    const isLargeScreen = useMediaQuery(theme.breakpoints.up('md'));
     const [query, setQuery] = useState('sort=-created_at');
     const [showScrollTop, setShowScrollTop] = useState(false);
     const [showFilters, setShowFilters] = useState(false);
@@ -275,6 +283,7 @@ const PostsPage = () => {
             onClick={toggleFilters}
             sx={{
                 mb: 2,
+                ml: 1,
                 color: '#e0e0e0',
                 border: '1px solid rgba(156, 39, 176, 0.5)',
                 '&:hover': {
@@ -347,67 +356,7 @@ const PostsPage = () => {
             ) : (
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     {topPosts?.map((post) => (
-                        <motion.div
-                            key={post.id}
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                        >
-                            <Paper
-                                sx={{
-                                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                                    borderRadius: 1,
-                                    p: 1.5,
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s ease',
-                                    '&:hover': {
-                                        backgroundColor: 'rgba(156, 39, 176, 0.1)',
-                                        boxShadow: '0 0 10px rgba(156, 39, 176, 0.2)'
-                                    }
-                                }}
-                            >
-                                <Typography
-                                    variant="subtitle2"
-                                    sx={{
-                                        fontWeight: 600,
-                                        mb: 0.5,
-                                        display: '-webkit-box',
-                                        WebkitLineClamp: 2,
-                                        WebkitBoxOrient: 'vertical',
-                                        overflow: 'hidden',
-                                        color: '#ffffff'
-                                    }}
-                                >
-                                    {post.title}
-                                </Typography>
-                                <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-                                    {post.tags?.length > 0 && (
-                                        <Chip
-                                            label={`# ${post.tags[0].name}`}
-                                            size="small"
-                                            sx={{
-                                                mr: 1,
-                                                bgcolor: 'rgba(156, 39, 176, 0.2)',
-                                                color: '#e0e0e0'
-                                            }}
-                                        />
-                                    )}
-                                    <Box sx={{ display: 'flex', alignItems: 'center', ml: 'auto' }}>
-                                        <Favorite
-                                            sx={{ fontSize: 16, color: '#ff4081', mr: 0.5 }}
-                                        />
-                                        <Typography variant="caption" sx={{ mr: 1, color: '#e0e0e0' }}>
-                                            {post.likes_count.toLocaleString()}
-                                        </Typography>
-                                        <ChatBubbleOutline
-                                            sx={{ fontSize: 16, color: '#b0b0b0', mr: 0.5 }}
-                                        />
-                                        <Typography variant="caption" sx={{ color: '#e0e0e0' }}>
-                                            {post.comments_count.toLocaleString()}
-                                        </Typography>
-                                    </Box>
-                                </Box>
-                            </Paper>
-                        </motion.div>
+                        <InlinePostCard key={post.id} post={post} />
                     ))}
                 </Box>
             )}
@@ -439,8 +388,8 @@ const PostsPage = () => {
                             px: 2,
                             pt: 2,
                             pb: 4
-                        }
-                    }}
+                        }}
+                    }
                 >
                     <PostsFilter isMobile={isMobile} onClose={toggleFilters} onApplyFilters={handleApplyFilters} />
                 </Drawer>
@@ -667,37 +616,142 @@ const PostsPage = () => {
                 </Grid>
             </Container>
 
-            {/* Scroll to top button */}
-            <AnimatePresence>
-                {showScrollTop && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 20 }}
-                        transition={{ duration: 0.3 }}
-                        style={{
-                            position: 'fixed',
-                            bottom: 24,
-                            right: 24,
-                            zIndex: 1000
-                        }}
-                    >
-                        <IconButton
-                            onClick={scrollToTop}
+            {/* Action buttons (Scroll to top and Create post) */}
+            <Box
+                sx={{
+                    position: 'fixed',
+                    bottom: 24,
+                    right: 24,
+                    zIndex: 1000,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1
+                }}
+            >
+                <AnimatePresence>
+                    {showScrollTop && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 20 }}
+                            transition={{ duration: 0.3 }}
+                        >
+                            <IconButton
+                                onClick={scrollToTop}
+                                sx={{
+                                    backgroundColor: 'rgba(156, 39, 176, 0.8)',
+                                    color: 'white',
+                                    '&:hover': {
+                                        backgroundColor: 'rgba(156, 39, 176, 1)',
+                                        boxShadow: '0 0 15px rgba(156, 39, 176, 0.5)'
+                                    },
+                                    width: 48,
+                                    height: 48
+                                }}
+                            >
+                                <KeyboardArrowUp />
+                            </IconButton>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                <motion.div
+                    initial={{opacity: 0, y: 20}}
+                    animate={{opacity: 1, y: 0}}
+                    transition={{duration: 0.3}}
+                >
+                    {isLargeScreen ? (
+                        <Button
+                            component={Link}
+                            to="/posts/create"
+                            variant="contained"
+                            startIcon={<PostAdd sx={{fontSize: 24}}/>}
                             sx={{
-                                backgroundColor: 'rgba(156, 39, 176, 0.8)',
-                                color: 'white',
+                                position: 'relative',
+                                background: 'linear-gradient(135deg, rgba(74, 20, 140, 0.9), rgba(40, 26, 100, 0.9))',
+                                backdropFilter: 'blur(10px)',
+                                color: '#ffffff',
+                                fontWeight: 600,
+                                px: 3,
+                                py: 1.5,
+                                mb: 0.2,
+                                borderRadius: '24px',
+                                textTransform: 'none',
+                                fontSize: '0.9rem',
+                                minWidth: '180px',
+                                overflow: 'hidden',
                                 '&:hover': {
-                                    backgroundColor: 'rgba(156, 39, 176, 1)',
-                                    boxShadow: '0 0 15px rgba(156, 39, 176, 0.5)'
-                                }
+                                    background: 'linear-gradient(135deg, rgba(106, 27, 154, 1), rgba(61, 40, 143, 1))',
+                                    boxShadow: '0 0 12px rgba(74, 20, 140, 0.5)',
+                                    '&::before': {
+                                        opacity: 1
+                                    }
+                                },
+                                '&::before': {
+                                    content: '""',
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    bottom: 0,
+                                    borderRadius: '24px',
+                                    padding: '1px',
+                                    background: 'linear-gradient(135deg, rgba(106, 27, 154, 0.5), rgba(61, 40, 143, 0.5))',
+                                    WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+                                    WebkitMaskComposite: 'xor',
+                                    maskComposite: 'exclude',
+                                    opacity: 0.3,
+                                    transition: 'opacity 0.3s'
+                                },
+                                transition: 'all 0.3s ease'
                             }}
                         >
-                            <KeyboardArrowUp />
+                            Створити пост
+                        </Button>
+                    ) : (
+                        <IconButton
+                            component={Link}
+                            to="/posts/create"
+                            sx={{
+                                position: 'relative',
+                                background: 'linear-gradient(135deg, rgba(74, 20, 140, 0.9), rgba(40, 26, 100, 0.9))',
+                                backdropFilter: 'blur(10px)',
+                                color: '#ffffff',
+                                width: 52,
+                                height: 52,
+                                borderRadius: '14px',
+                                overflow: 'hidden',
+                                '&:hover': {
+                                    background: 'linear-gradient(135deg, rgba(106, 27, 154, 1), rgba(61, 40, 143, 1))',
+                                    boxShadow: '0 0 12px rgba(74, 20, 140, 0.5)',
+                                    '&::before': {
+                                        opacity: 1
+                                    }
+                                },
+                                '&::before': {
+                                    content: '""',
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    bottom: 0,
+                                    borderRadius: '14px',
+                                    padding: '1px',
+                                    background: 'linear-gradient(135deg, rgba(106, 27, 154, 0.5), rgba(61, 40, 143, 0.5))',
+                                    WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+                                    WebkitMaskComposite: 'xor',
+                                    maskComposite: 'exclude',
+                                    opacity: 0.3,
+                                    transition: 'opacity 0.3s'
+                                },
+                                transition: 'all 0.3s ease'
+                            }}
+                        >
+                            <PostAdd sx={{fontSize: 28}}/>
                         </IconButton>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+                    )}
+                </motion.div>
+            </Box>
         </Box>
     );
 };

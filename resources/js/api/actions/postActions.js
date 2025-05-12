@@ -9,7 +9,7 @@ const getPosts = (query = null) => {
     }
     return window.axios.get(postUrls.index);
 };
-const getPost = (postId) => window.axios.get(postUrls.show(postId));
+const getPost = (identifier) => window.axios.get(postUrls.show(identifier));
 const createPost = (payload) => window.axios.post(postUrls.store, payload);
 const updatePost = (postId, payload) => window.axios.put(postUrls.update(postId), payload);
 const deletePost = (postId) => window.axios.delete(postUrls.destroy(postId));

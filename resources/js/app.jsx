@@ -10,6 +10,7 @@ import {ToastContainer} from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
 import {OnlineUsersProvider} from "@/Components/Social/OnlineUsersProvider.jsx";
 import {QueryClient, QueryClientProvider} from "react-query";
+import NotFoundPage from "@/Pages/NotFoundPage.jsx";
 
 const queryClient = new QueryClient();
 
@@ -35,6 +36,7 @@ const Root = () => (
                             {routes.map(({path, element}, index) => (
                                 <Route key={index} path={path} element={element}/>
                             ))}
+                            <Route path="*" element={<NotFoundPage />} />
                         </Routes>
                     </AppLayout>
                 </QueryClientProvider>

@@ -25,6 +25,11 @@ const UserMenu = ({onSignInClick}) => {
         handleMenuClose();
     };
 
+    const handleSettingsOpen = () => {
+        navigate(`/settings`)
+        handleMenuClose();
+    };
+
     const handleLogout = () => {
         logout();
         handleMenuClose();
@@ -141,7 +146,7 @@ const UserMenu = ({onSignInClick}) => {
                         <Typography variant="body2">Преміум</Typography>
                     </MenuItem>
 
-                    <MenuItem onClick={handleMenuClose}>
+                    <MenuItem onClick={handleSettingsOpen}>
                         <Settings sx={{marginRight: 2, fontSize: "20px", color: "white"}}/>
                         <Typography variant="body2">Налаштування</Typography>
                     </MenuItem>

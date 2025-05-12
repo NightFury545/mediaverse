@@ -76,11 +76,11 @@ class GetPostAction
     /**
      * Перевіряє, чи користувач вже переглядав пост.
      *
-     * @param int $postId Ідентифікатор поста
-     * @param int $userId Ідентифікатор користувача
+     * @param string $postId Ідентифікатор поста
+     * @param string $userId Ідентифікатор користувача
      * @return bool true, якщо пост вже був переглянутий користувачем
      */
-    private function hasUserViewedPost(int $postId, int $userId): bool
+    private function hasUserViewedPost(string $postId, string $userId): bool
     {
         return PostView::where('post_id', $postId)
             ->where('user_id', $userId)
@@ -90,11 +90,11 @@ class GetPostAction
     /**
      * Записує новий перегляд поста для користувача.
      *
-     * @param int $postId Ідентифікатор поста
-     * @param int $userId Ідентифікатор користувача
+     * @param string $postId Ідентифікатор поста
+     * @param string $userId Ідентифікатор користувача
      * @return void
      */
-    private function recordPostView(int $postId, int $userId): void
+    private function recordPostView(string $postId, string $userId): void
     {
         PostView::create([
             'post_id' => $postId,

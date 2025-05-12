@@ -18,3 +18,4 @@ require base_path('routes/api/social/user-block.php');
 require base_path('routes/api/social/user-status.php');
 require base_path('routes/api/social/like.php');
 require base_path('routes/api/social/notification.php');
+require base_path('routes/api/social/setting.php');

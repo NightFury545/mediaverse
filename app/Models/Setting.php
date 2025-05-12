@@ -35,7 +35,13 @@ class Setting extends Model
      */
     public function setNotificationEnabled(NotificationType $type, bool $enabled): void
     {
-        $this->notifications_enabled[$type->value] = $enabled;
+
+        $notifications = $this->notifications_enabled ?? [];
+
+        $notifications[$type->value] = $enabled;
+
+        $this->notifications_enabled = $notifications;
+
         $this->save();
     }
 

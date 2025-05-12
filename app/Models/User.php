@@ -39,6 +39,8 @@ class User extends Authenticatable implements MustVerifyEmail, JWTSubject, Filam
 
     protected $hidden = [
         'password',
+        'google_id',
+        'github_id',
     ];
 
     protected $casts = [

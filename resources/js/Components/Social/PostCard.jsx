@@ -33,6 +33,8 @@ import { useMutation, useQueryClient } from "react-query";
 import { formatDate } from "@/utils/formatDate.js";
 import {normalizeAttachments} from "@/utils/normalizeAttachments.js";
 import {STORAGE_URL} from "@/config/env.js";
+import {useNavigate} from "react-router-dom";
+import DOMPurify from 'dompurify';
 
 const PLACEHOLDER_IMAGE = 'https://via.placeholder.com/600x600.png?text=Media+Not+Found';
 
@@ -41,7 +43,7 @@ const PostCard = ({
                           id: '',
                           title: '',
                           content: '',
-                          user: { id: 0, name: '', avatar: '' },
+                          user: { id: 0, username: '', avatar: '' },
                           attachments: [],
                           likes_count: 0,
                           comments_count: 0,
@@ -53,9 +55,12 @@ const PostCard = ({
                           comments_enabled: true
                       },
                       userLiked = false,
-                      likeId
+                      likeId,
+                      isClickable = true,
+                      previewMode = false
                   }) => {
-    const media = normalizeAttachments(post.attachments);
+    const media = previewMode ? post.attachments : normalizeAttachments(post.attachments);
+
     const [anchorEl, setAnchorEl] = useState(null);
     const [isLiked, setIsLiked] = useState(userLiked);
     const [currentLikes, setCurrentLikes] = useState(post.likes_count || 0);
@@ -65,13 +70,29 @@ const PostCard = ({
     const [maxHeight, setMaxHeight] = useState(window.innerWidth <= 400 ? 250 : window.innerWidth <= 600 ? 300 : 400);
     const queryClient = useQueryClient();
     const carouselRef = useRef(null);
+    const navigate = useNavigate();
 
     const handleMenuOpen = (event) => {
+        if (previewMode) return;
+        event.stopPropagation();
         setAnchorEl(event.currentTarget);
     };
 
-    const handleMenuClose = () => {
+    const handleMenuClose = (event) => {
+        if (previewMode) return;
+        event.stopPropagation();
         setAnchorEl(null);
+    };
+
+    const handleMenuItemClick = (event) => {
+        if (previewMode) return;
+        event.stopPropagation();
+        handleMenuClose(event);
+    };
+
+    const handleNameClick = (event) => {
+        if (previewMode) return;
+        event.stopPropagation();
     };
 
     useEffect(() => {
@@ -115,6 +136,7 @@ const PostCard = ({
     );
 
     const handleLike = async () => {
+        if (previewMode) return;
         if (isLiked && likeId) {
             deleteLikeMutation.mutate();
         } else {
@@ -163,7 +185,7 @@ const PostCard = ({
             return new Promise((resolve) => {
                 if (item.type === 'image') {
                     const img = new Image();
-                    img.src = STORAGE_URL + item.url;
+                    img.src = previewMode ? item.url : STORAGE_URL + item.url;
                     img.onload = () => {
                         const aspectRatio = img.height / img.width;
                         const height = containerWidth * aspectRatio * (isSmallScreen ? 1.2 : 1);
@@ -203,20 +225,44 @@ const PostCard = ({
         };
     }, []);
 
+    const handleCardClick = (event) => {
+        const target = event.target;
+        const isInteractiveElement = target.closest(
+            'button, a, input, textarea, [role="button"], .MuiAvatar-root, .UserName, .MuiButton-root, .MuiIconButton-root, .MuiChip-root, .carousel'
+        );
+
+        if (!isInteractiveElement) {
+            navigate(`/posts/${post.slug}`);
+        }
+    };
+
+    const handleCommentClick = () => {
+        if (previewMode) return;
+        navigate(`/posts/${post.id}`);
+    };
+
+    const sanitizedContent = DOMPurify.sanitize(post.content, {
+        ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'a', 'ul', 'ol', 'li', 'blockquote'],
+        ALLOWED_ATTR: ['href', 'target', 'rel']
+    });
+
     return (
         <Box sx={{
             padding: { xs: '0 4px', sm: '0 8px' },
-            cursor: 'pointer',
+            cursor: isClickable ? 'pointer' : 'default',
             boxSizing: 'border-box',
             width: '100%',
             maxWidth: '100%',
             overflow: 'hidden',
-            '&:hover .post-card': {
-                backgroundColor: 'rgba(35, 35, 37, 0.6)'
-            }
+            ...(isClickable && {
+                '&:hover .post-card': {
+                    backgroundColor: 'rgba(35, 35, 37, 0.6)'
+                }
+            })
         }}>
             <Card
                 className="post-card"
+                onClick={isClickable ? handleCardClick : undefined}
                 sx={{
                     width: '100%',
                     maxWidth: '100%',
@@ -238,7 +284,7 @@ const PostCard = ({
                             userId={post.user.id}
                             src={post.user.avatar}
                         >
-                            {post.user.name.charAt(0)}
+                            {post.user.username.charAt(0)}
                         </UserAvatar>
                     }
                     action={
@@ -258,15 +304,16 @@ const PostCard = ({
                     }
                     title={
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Typography variant="subtitle2" sx={{
+                            <Typography  onClick={handleNameClick} variant="subtitle2" sx={{
                                 fontWeight: 600,
                                 color: '#ffffff',
+                                cursor: 'pointer',
                                 fontSize: { xs: '14px', sm: '16px' },
                                 '&:hover': {
                                     textDecoration: 'underline'
                                 }
                             }}>
-                                u/{post.user.name}
+                                {post.user.username}
                             </Typography>
                         </Box>
                     }
@@ -278,7 +325,7 @@ const PostCard = ({
                                 color: '#ffffff'
                             }
                         }}>
-                            {formatDate(post.created_at)} · r/{post.slug || 'community'}
+                            {formatDate(post.created_at)} · {post.slug || 'community'}
                         </Typography>
                     }
                     sx={{
@@ -343,21 +390,35 @@ const PostCard = ({
                         {post.title}
                     </Typography>
                     {post.content && (
-                        <Typography variant="body2" sx={{
-                            fontSize: { xs: '14px', sm: '15px' },
-                            lineHeight: '1.5',
-                            marginBottom: post.tags.length > 0 || media.length > 0 ? '12px' : 0,
-                            color: '#e0e0e0'
-                        }}>
-                            {post.content}
-                        </Typography>
+                        <Box
+                            sx={{
+                                fontSize: { xs: '14px', sm: '15px' },
+                                lineHeight: '1.5',
+                                marginBottom: post.tags.length > 0 || media.length > 0 ? '12px' : 0,
+                                color: '#e0e0e0',
+                                '& p': { margin: '0 0 8px 0' },
+                                '& strong': { fontWeight: 700 },
+                                '& em': { fontStyle: 'italic' },
+                                '& u': { textDecoration: 'underline' },
+                                '& a': { color: '#ff4081', textDecoration: 'underline', '&:hover': { color: '#f50057' } },
+                                '& ul, & ol': { margin: '0 0 8px 16px', paddingLeft: '16px' },
+                                '& li': { marginBottom: '4px' },
+                                '& blockquote': {
+                                    borderLeft: '3px solid #ff4081',
+                                    paddingLeft: '12px',
+                                    margin: '0 0 8px 0',
+                                    color: '#b0b0b0'
+                                }
+                            }}
+                            dangerouslySetInnerHTML={{ __html: sanitizedContent }}
+                        />
                     )}
                     {post.tags.length > 0 && (
                         <Box sx={{
                             display: 'flex',
                             flexWrap: 'wrap',
                             gap: '8px',
-                            marginBottom: media.length > 0 ? '12px' : 0
+                            marginBottom: media.length > 0 ? '4px' : 0
                         }}>
                             {post.tags.map((tag, index) => (
                                 <Chip
@@ -388,8 +449,8 @@ const PostCard = ({
                         ref={carouselRef}
                         sx={{
                             position: 'relative',
-                            width: 'calc(100% - 8px)',
-                            margin: { xs: '0 4px 8px 4px', sm: '0 4px 12px 4px' },
+                            width: { xs: 'calc(100% - 16px)', sm: 'calc(100% - 24px)' },
+                            margin: { xs: '0 4px 8px 4px', sm: '0 12px 12px 12px' },
                             backgroundColor: '#000000',
                             borderRadius: '8px',
                             overflow: 'hidden',
@@ -420,8 +481,8 @@ const PostCard = ({
                             backgroundImage: mediaErrors[currentSlide]
                                 ? `url(${PLACEHOLDER_IMAGE})`
                                 : media[currentSlide].type === 'image'
-                                    ? `url(${STORAGE_URL + media[currentSlide].url})`
-                                    : `url(${media[currentSlide].thumbnail || STORAGE_URL + media[currentSlide].url || PLACEHOLDER_IMAGE})`,
+                                    ? `url(${previewMode ? media[currentSlide].url : STORAGE_URL + media[currentSlide].url})`
+                                    : `url(${previewMode ? (media[currentSlide].thumbnail || media[currentSlide].url) : (media[currentSlide].thumbnail || STORAGE_URL + media[currentSlide].url) || PLACEHOLDER_IMAGE})`,
                             backgroundSize: 'cover',
                             backgroundPosition: 'center',
                             filter: 'blur(20px) brightness(0.7)',
@@ -606,7 +667,7 @@ const PostCard = ({
 
                                         {item.type === 'image' ? (
                                             <img
-                                                src={mediaErrors[index] ? PLACEHOLDER_IMAGE : STORAGE_URL + item.url}
+                                                src={mediaErrors[index] ? PLACEHOLDER_IMAGE : (previewMode ? item.url : STORAGE_URL + item.url)}
                                                 alt={`Post media ${index + 1}`}
                                                 style={{
                                                     width: '100%',
@@ -623,7 +684,7 @@ const PostCard = ({
                                             />
                                         ) : (
                                             <video
-                                                src={mediaErrors[index] ? PLACEHOLDER_IMAGE : STORAGE_URL + item.url}
+                                                src={mediaErrors[index] ? PLACEHOLDER_IMAGE : (previewMode ? item.url : STORAGE_URL + item.url)}
                                                 controls
                                                 muted
                                                 autoPlay={false}
@@ -754,6 +815,7 @@ const PostCard = ({
                         </Button>
 
                         <Button
+                            onClick={handleCommentClick}
                             startIcon={
                                 <Box sx={{
                                     display: 'flex',
