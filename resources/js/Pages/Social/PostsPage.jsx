@@ -54,18 +54,14 @@ const fetchPosts = async ({ pageParam = null, query = '' }) => {
             tags: post.tags ? post.tags.map((tag) => tag.name) : [],
             visibility: post.visibility || 'public',
             comments_enabled: post.comments_enabled ?? true,
+            user_liked: post.user_liked || false,
+            like_id: post.like_id || null
         })),
         nextCursor: response.data.next_cursor,
         nextPageUrl: response.data.next_page_url,
         hasMore: !!response.data.next_page_url,
         totalPosts: response.data.data.length,
     };
-};
-
-const fetchUserLikes = async () => {
-    const query = 'filter[likeable_type]=Post';
-    const response = await likeActions.getUserLikes(query);
-    return response.data.data;
 };
 
 const fetchTopPosts = async () => {
@@ -191,27 +187,6 @@ const PostsPage = () => {
             keepPreviousData: true,
         }
     );
-
-    const {
-        data: userLikes = [],
-        isLoading: isUserLikesLoading,
-        isError: isUserLikesError,
-        error: userLikesError,
-    } = useQuery(['userLikes'], fetchUserLikes, {
-        enabled: !!isAuthenticated && !!user.email_verified_at,
-        staleTime: 1000 * 60,
-        select: (likes) => {
-            return likes.reduce((acc, like) => {
-                if (like.likeable_type === 'App\\Models\\Post') {
-                    acc[like.likeable_id] = {
-                        user_liked: true,
-                        like_id: like.id,
-                    };
-                }
-                return acc;
-            }, {});
-        },
-    });
 
     const {
         data: topPostsData,
@@ -584,8 +559,6 @@ const PostsPage = () => {
                                         <Box sx={{ mb: 3 }}>
                                             <PostCard
                                                 post={post}
-                                                userLiked={userLikes[post.id]?.user_liked || false}
-                                                likeId={userLikes[post.id]?.like_id}
                                             />
                                         </Box>
                                     </motion.div>
@@ -620,7 +593,6 @@ const PostsPage = () => {
                                 top: 20,
                                 alignSelf: 'flex-start',
                                 maxHeight: 'calc(100vh - 40px)',
-                                // border: '1px solid blue', // Для дебагінгу
                             }}
                         >
                             <motion.div

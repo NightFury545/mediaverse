@@ -52,17 +52,17 @@ const PostCard = ({
                           slug: '',
                           tags: [],
                           visibility: 'public',
-                          comments_enabled: true
+                          comments_enabled: true,
+                          user_liked: false,
+                          like_id: null
                       },
-                      userLiked = false,
-                      likeId,
                       isClickable = true,
                       previewMode = false
                   }) => {
     const media = previewMode ? post.attachments : normalizeAttachments(post.attachments);
 
     const [anchorEl, setAnchorEl] = useState(null);
-    const [isLiked, setIsLiked] = useState(userLiked);
+    const [isLiked, setIsLiked] = useState(post.user_liked);
     const [currentLikes, setCurrentLikes] = useState(post.likes_count || 0);
     const [currentSlide, setCurrentSlide] = useState(0);
     const [mediaLoaded, setMediaLoaded] = useState(media.map(() => false));
@@ -96,8 +96,8 @@ const PostCard = ({
     };
 
     useEffect(() => {
-        setIsLiked(userLiked);
-    }, [userLiked]);
+        setIsLiked(post.user_liked);
+    }, [post.user_liked]);
 
     const createLikeMutation = useMutation(
         () => likeActions.createLike('posts', post.id),
@@ -118,7 +118,7 @@ const PostCard = ({
     );
 
     const deleteLikeMutation = useMutation(
-        () => likeActions.deleteLike(likeId),
+        () => likeActions.deleteLike(post.like_id),
         {
             onMutate: async () => {
                 setIsLiked(false);
@@ -137,7 +137,7 @@ const PostCard = ({
 
     const handleLike = async () => {
         if (previewMode) return;
-        if (isLiked && likeId) {
+        if (isLiked && post.like_id) {
             deleteLikeMutation.mutate();
         } else {
             createLikeMutation.mutate();

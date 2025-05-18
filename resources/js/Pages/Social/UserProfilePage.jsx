@@ -129,6 +129,31 @@ const UserProfilePage = () => {
         {
             getNextPageParam: (lastPage) => lastPage.next_cursor || undefined,
             enabled: !!profileUser,
+            select: (data) => ({
+                pages: data.pages.map((page) => ({
+                    ...page,
+                    data: page.data.map((post) => ({
+                        id: post.id,
+                        title: post.title,
+                        content: post.content,
+                        slug: post.slug,
+                        likes_count: post.likes_count || 0,
+                        comments_count: post.comments_count || 0,
+                        views_count: post.views_count || 0,
+                        created_at: post.created_at,
+                        user: {
+                            id: post.user?.id,
+                            username: post.user?.username || 'Anonymous',
+                            avatar: post.user?.avatar || `https://i.pravatar.cc/150?img=${post.user?.id || 0}`,
+                        },
+                        tags: post.tags ? post.tags.map((tag) => tag.name) : [],
+                        attachments: post.attachments || [],
+                        user_liked: post.user_liked || false,
+                        like_id: post.like_id || null,
+                    })),
+                })),
+                pageParams: data.pageParams,
+            }),
         }
     );
 
@@ -143,6 +168,30 @@ const UserProfilePage = () => {
         {
             getNextPageParam: (lastPage) => (lastPage.current_page < lastPage.last_page ? lastPage.current_page + 1 : undefined),
             enabled: !!profileUser,
+            select: (data) => ({
+                pages: data.pages.map((page) => ({
+                    ...page,
+                    data: page.data.map((post) => ({
+                        id: post.id,
+                        title: post.title,
+                        content: post.content,
+                        slug: post.slug,
+                        likes_count: post.likes_count || 0,
+                        comments_count: post.comments_count || 0,
+                        created_at: post.created_at,
+                        user: {
+                            id: post.user?.id,
+                            username: post.user?.username || 'Anonymous',
+                            avatar: post.user?.avatar || `https://i.pravatar.cc/150?img=${post.user?.id || 0}`,
+                        },
+                        tags: post.tags ? post.tags.map((tag) => tag.name) : [],
+                        attachments: post.attachments || [],
+                        user_liked: post.user_liked || false, // Додано для бекенд-рішення
+                        like_id: post.like_id || null, // Додано для бекенд-рішення
+                    })),
+                })),
+                pageParams: data.pageParams,
+            }),
         }
     );
 

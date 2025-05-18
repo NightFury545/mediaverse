@@ -49,18 +49,12 @@ const fetchPost = async (slug) => {
         slug: post.data.slug,
         tags: post.data.tags ? post.data.tags.map(tag => tag.name) : [],
         visibility: post.data.visibility || 'public',
-        comments_enabled: post.data.comments_enabled ?? true
+        comments_enabled: post.data.comments_enabled ?? true,
+        user_liked: post.data.user_liked || false,
+        like_id: post.data.like_id || null
     };
 };
 
-// Функція для отримання лайків користувача
-const fetchUserLikes = async () => {
-    const query = 'filter[likeable_type]=Post';
-    const response = await likeActions.getUserLikes(query);
-    return response.data.data;
-};
-
-// Функція для отримання схожих постів (за тегами)
 const fetchSimilarPosts = async (tags) => {
     const query = tags.length > 0 ? `filter[tags]=${tags.join(',')}&perPage=5` : 'perPage=5';
     const response = await postActions.getPosts(query);
@@ -134,31 +128,15 @@ const PostDetailsPage = () => {
         isError: isPostError,
         error: postError
     } = useQuery(['post', identifier], () => fetchPost(identifier), {
-        staleTime: 1000 * 60 * 5,
+        staleTime: 1000 * 60,
         retry: false,
         refetchOnWindowFocus: false
     });
 
-    const {
-        data: userLikes = {},
-        isLoading: isUserLikesLoading,
-        isError: isUserLikesError
-    } = useQuery(['userLikes'], fetchUserLikes, {
-        enabled: !!isAuthenticated && !!user.email_verified_at,
-        refetchOnWindowFocus: false,
-        staleTime: 1000 * 60 * 5,
-        select: (likes) => {
-            return likes.reduce((acc, like) => {
-                if (like.likeable_type === 'App\\Models\\Post') {
-                    acc[like.likeable_id] = {
-                        user_liked: true,
-                        like_id: like.id
-                    };
-                }
-                return acc;
-            }, {});
-        }
-    });
+    if (isPostError) {
+        const errorMessage = postError.response?.data?.error || 'Цей пост приватний або у вас немає прав для перегляду';
+        return <ErrorMessage message={errorMessage} isMobile={isMobile} />;
+    }
 
     const {
         data: similarPostsData,
@@ -166,8 +144,9 @@ const PostDetailsPage = () => {
         isError: isSimilarPostsError
     } = useQuery(['similarPosts', post?.tags], () => fetchSimilarPosts(post?.tags || []), {
         enabled: !!post,
-        staleTime: 1000 * 60 * 5,
-        refetchOnWindowFocus: false
+        staleTime: 1000 * 60,
+        refetchOnWindowFocus: false,
+        retry: false
     });
 
     const {
@@ -176,7 +155,8 @@ const PostDetailsPage = () => {
         isError: isUserPostsError
     } = useQuery(['userPosts', post?.user.id], () => fetchUserPosts(post?.user.username), {
         enabled: !!post,
-        staleTime: 1000 * 60 * 5
+        staleTime: 1000 * 60,
+        retry: false
     });
 
     const similarPosts = similarPostsData?.posts || [];
@@ -250,7 +230,6 @@ const PostDetailsPage = () => {
         </Paper>
     );
 
-    // Компонент для відображення постів користувача
     const UserPostsSidebar = () => (
         <Paper
             sx={{
@@ -378,11 +357,6 @@ const PostDetailsPage = () => {
             )}
         </Paper>
     );
-
-    if (isPostError) {
-        const errorMessage = postError.response?.data?.error || 'Цей пост приватний або у вас немає прав для перегляду';
-        return <ErrorMessage message={errorMessage} isMobile={isMobile} />;
-    }
 
     return (
         <Box
@@ -562,8 +536,6 @@ const PostDetailsPage = () => {
                                 <Box sx={{ mb: 3 }}>
                                     <PostCard
                                         post={post}
-                                        userLiked={userLikes[post.id]?.user_liked || false}
-                                        likeId={userLikes[post.id]?.like_id}
                                         isClickable={false}
                                     />
                                 </Box>

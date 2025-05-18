@@ -31,7 +31,24 @@ class GetPostsAction
 
             $this->applySorting($query);
 
-            return $query->cursorPaginate($perPage)->withQueryString();
+            $posts = $query->cursorPaginate($perPage)->withQueryString();
+
+            $posts->getCollection()->transform(function ($post) {
+                $user = auth()->user();
+                if ($user) {
+                    $like = $post->likes()
+                        ->where('user_id', $user->id)
+                        ->first();
+                    $post->user_liked = !empty($like);
+                    $post->like_id = $like ? $like->id : null;
+                } else {
+                    $post->user_liked = false;
+                    $post->like_id = null;
+                }
+                return $post;
+            });
+
+            return $posts;
         } catch (Exception $e) {
             throw new Exception('Помилка під час отримання постів: ' . $e->getMessage());
         }

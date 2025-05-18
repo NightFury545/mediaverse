@@ -28,6 +28,10 @@ class GetPostAction
 
             $this->checkVisibility($post);
 
+            $user = auth()->user();
+            $post->user_liked = $user && $post->likes()->where('user_id', $user->id)->exists();
+            $post->like_id = $user ? $post->likes()->where('user_id', $user->id)->value('id') : null;
+
             if (auth()->check()) {
                 $this->handlePostView($post);
             }
