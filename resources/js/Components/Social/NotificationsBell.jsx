@@ -22,6 +22,7 @@ const NotificationsBell = () => {
             nextPageUrl: response.data.next_page_url,
         }),
         enabled: !!userId,
+        refetchOnWindowFocus: false,
     });
 
     useEffect(() => {

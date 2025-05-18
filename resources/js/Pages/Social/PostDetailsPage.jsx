@@ -26,8 +26,9 @@ import PostCard from '@/Components/Social/PostCard.jsx';
 import { postActions, likeActions } from '@/api/actions';
 import { useAuth } from "@/Components/Auth/AuthProvider.jsx";
 import InlinePostCard from "@/Components/Social/InlinePostCard.jsx";
+import PostCommentsSection from "@/Components/Social/PostCommentsSection.jsx";
+import ErrorMessage from "@/Components/Social/ErrorMessage.jsx";
 
-// Функція для отримання деталей поста
 const fetchPost = async (slug) => {
     const response = await postActions.getPost(slug);
     const post = response.data;
@@ -77,7 +78,6 @@ const fetchSimilarPosts = async (tags) => {
     };
 };
 
-// Функція для отримання постів користувача
 const fetchUserPosts = async (username) => {
     const query = `filter[user.username]=${username}&perPage=5`;
     const response = await postActions.getPosts(query);
@@ -94,19 +94,6 @@ const fetchUserPosts = async (username) => {
     };
 };
 
-// Заглушка для секції коментарів
-const PostCommentsSection = () => (
-    <Box sx={{ mt: 3, p: 2, backgroundColor: 'rgba(10, 10, 15, 0.7)', borderRadius: 2 }}>
-        <Typography variant="h6" sx={{ color: '#ffffff', mb: 2 }}>
-            Коментарі
-        </Typography>
-        <Typography variant="body2" sx={{ color: '#b0b0b0' }}>
-            Секція коментарів буде реалізована пізніше.
-        </Typography>
-    </Box>
-);
-
-// Заглушка для порожньої секції схожих постів
 const EmptySimilarPostsPlaceholder = () => (
     <motion.div
         initial={{ opacity: 0 }}
@@ -141,23 +128,24 @@ const PostDetailsPage = () => {
     const { identifier } = useParams();
     const { isAuthenticated, user } = useAuth();
 
-    // Запит для отримання поста
     const {
         data: post,
         isLoading: isPostLoading,
         isError: isPostError,
         error: postError
     } = useQuery(['post', identifier], () => fetchPost(identifier), {
-        staleTime: 1000 * 60 * 5
+        staleTime: 1000 * 60 * 5,
+        retry: false,
+        refetchOnWindowFocus: false
     });
 
-    // Запит для отримання лайків користувача
     const {
         data: userLikes = {},
         isLoading: isUserLikesLoading,
         isError: isUserLikesError
     } = useQuery(['userLikes'], fetchUserLikes, {
         enabled: !!isAuthenticated && !!user.email_verified_at,
+        refetchOnWindowFocus: false,
         staleTime: 1000 * 60 * 5,
         select: (likes) => {
             return likes.reduce((acc, like) => {
@@ -172,17 +160,16 @@ const PostDetailsPage = () => {
         }
     });
 
-    // Запит для отримання схожих постів
     const {
         data: similarPostsData,
         isLoading: isSimilarPostsLoading,
         isError: isSimilarPostsError
     } = useQuery(['similarPosts', post?.tags], () => fetchSimilarPosts(post?.tags || []), {
         enabled: !!post,
-        staleTime: 1000 * 60 * 5
+        staleTime: 1000 * 60 * 5,
+        refetchOnWindowFocus: false
     });
 
-    // Запит для отримання постів користувача
     const {
         data: userPostsData,
         isLoading: isUserPostsLoading,
@@ -196,8 +183,6 @@ const PostDetailsPage = () => {
     const totalSimilarPosts = similarPostsData?.totalPosts || 0;
     const userPosts = userPostsData?.posts.filter(p => p.id !== post?.id) || [];
     const totalUserPosts = userPosts.length;
-    console.log(similarPosts);
-    // Компонент для відображення схожих постів
     const SimilarPostsSidebar = () => (
         <Paper
             sx={{
@@ -394,6 +379,11 @@ const PostDetailsPage = () => {
         </Paper>
     );
 
+    if (isPostError) {
+        const errorMessage = postError.response?.data?.error || 'Цей пост приватний або у вас немає прав для перегляду';
+        return <ErrorMessage message={errorMessage} isMobile={isMobile} />;
+    }
+
     return (
         <Box
             sx={{
@@ -577,7 +567,7 @@ const PostDetailsPage = () => {
                                         isClickable={false}
                                     />
                                 </Box>
-                                <PostCommentsSection />
+                                <PostCommentsSection post={post} />
                             </motion.div>
                         )}
                     </Grid>

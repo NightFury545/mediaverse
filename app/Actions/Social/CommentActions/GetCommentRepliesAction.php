@@ -4,8 +4,8 @@ namespace App\Actions\Social\CommentActions;
 
 use App\Models\Comment;
 use App\Models\User;
+use Illuminate\Contracts\Pagination\CursorPaginator;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Schema;
 use Spatie\QueryBuilder\QueryBuilder;
 use Spatie\QueryBuilder\AllowedFilter;
@@ -19,17 +19,17 @@ class GetCommentRepliesAction
      *
      * @param Comment $comment Батьківський коментар
      * @param int $perPage Кількість відповідей на сторінку
-     * @return LengthAwarePaginator
+     * @return CursorPaginator
      * @throws Exception
      */
-    public function __invoke(Comment $comment, int $perPage = 20): LengthAwarePaginator
+    public function __invoke(Comment $comment, int $perPage = 20): CursorPaginator
     {
         $this->checkVisibility($comment);
 
         return $this->applyPagination(
             $this->applySorting(
                 $this->applyFilters(
-                    $comment->children()->with(['user:id,username,first_name,last_name,avatar'])
+                    $comment->replies()->with(['user:id,username,first_name,last_name,avatar'])->withCount('replies')
                 )
             ),
             $perPage
@@ -55,9 +55,9 @@ class GetCommentRepliesAction
         ]);
     }
 
-    private function applyPagination(QueryBuilder $query, int $perPage): LengthAwarePaginator
+    private function applyPagination(QueryBuilder $query, int $perPage): CursorPaginator
     {
-        return $query->paginate($perPage);
+        return $query->cursorPaginate($perPage)->withQueryString();
     }
 
     /**

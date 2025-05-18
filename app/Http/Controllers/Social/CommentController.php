@@ -30,7 +30,7 @@ class CommentController extends Controller
      *
      * @throws AuthorizationException
      */
-    public function store(CreateCommentRequest $request, Movie|Post $commentable): JsonResponse
+    public function store(CreateCommentRequest $request, string $commentable_type, Movie|Post $commentable): JsonResponse
     {
         $this->authorize('create', Comment::class);
 
@@ -47,7 +47,7 @@ class CommentController extends Controller
     /**
      * Отримує список коментарів для поста або фільму.
      */
-    public function index(Request $request, Movie|Post $commentable): JsonResponse
+    public function index(Request $request, string $commentable_type, Movie|Post $commentable): JsonResponse
     {
         try {
             $comments = $this->commentService->getComments($commentable, $request->get('per_page', 20));

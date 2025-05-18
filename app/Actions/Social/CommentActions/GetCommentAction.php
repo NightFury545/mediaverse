@@ -25,7 +25,7 @@ class GetCommentAction
     {
         try {
             $comment = Comment::with([
-                'children.user:id,username,first_name,last_name,avatar,is_online',
+                'replies.user:id,username,first_name,last_name,avatar,is_online',
                 'commentable'
             ])->find($commentId);
 

@@ -23,14 +23,18 @@ class UpdatePostRequest extends FormRequest
             FileExtension::getImageExtensions(),
             FileExtension::getVideoExtensions()
         );
-
+        $mimes = implode(',', $allowedExtensions);
         return [
             'title' => 'required|string|max:36',
             'content' => 'required|string|max:564',
             'tags' => 'nullable|array',
             'tags.*' => 'string|min:2|max:24',
             'attachments' => 'nullable|array',
-            'attachments.*' => ['file', Rule::in($allowedExtensions), 'max:20480'],
+            'attachments.*' => [
+                'file',
+                'mimes:' . $mimes,
+                'max:20480',
+            ],
             'visibility' => ['nullable', Rule::in(PostVisibility::getValues())],
             'comments_enabled' => 'nullable|boolean',
         ];

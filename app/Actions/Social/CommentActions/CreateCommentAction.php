@@ -34,9 +34,9 @@ class CreateCommentAction
 
             $commentData = $this->prepareCommentData($data);
 
-            $comment = Comment::create($commentData);
+            $comment = $commentable->comments()->create($commentData);
 
-            $commentable->comments()->save($comment);
+            $this->incrementCommentsCountIfApplicable($commentable);
 
             $this->sendCommentNotificationIfEnabled($commentable, $comment);
 
@@ -48,6 +48,19 @@ class CreateCommentAction
         } catch (Exception $e) {
             DB::rollBack();
             throw new Exception('Помилка під час створення коментаря: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Збільшує лічильник comments_count у моделі, якщо такий стовпець існує.
+     *
+     * @param Post|Movie $commentable
+     * @return void
+     */
+    private function incrementCommentsCountIfApplicable(Post|Movie $commentable): void
+    {
+        if (Schema::hasColumn($commentable->getTable(), 'comments_count')) {
+            $commentable->increment('comments_count');
         }
     }
 

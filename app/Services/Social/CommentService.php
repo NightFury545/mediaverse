@@ -13,6 +13,7 @@ use App\Models\Comment;
 use App\Models\Movie;
 use App\Models\Post;
 use Exception;
+use Illuminate\Contracts\Pagination\CursorPaginator;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 class CommentService
@@ -63,7 +64,7 @@ class CommentService
      *
      * @throws Exception
      */
-    public function getComments(Movie|Post $commentable, int $perPage = 20): LengthAwarePaginator
+    public function getComments(Movie|Post $commentable, int $perPage = 20): CursorPaginator
     {
         return ($this->getCommentsAction)($commentable, $perPage);
     }
@@ -91,7 +92,7 @@ class CommentService
      *
      * @throws Exception
      */
-    public function getReplies(Comment $comment, int $perPage = 20): LengthAwarePaginator
+    public function getReplies(Comment $comment, int $perPage = 20): CursorPaginator
     {
         return ($this->getCommentRepliesAction)($comment, $perPage);
     }

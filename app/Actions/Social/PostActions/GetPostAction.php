@@ -35,7 +35,7 @@ class GetPostAction
             return $post;
         } catch (Exception $e) {
             throw new Exception(
-                'Помилка під час отримання поста. Можлива проблема з базою даних або доступом до поста.'
+                'Помилка під час отримання поста. ' . $e->getMessage(),
             );
         }
     }

@@ -1,28 +1,371 @@
-import React from 'react';
-import {Container, Typography} from '@mui/material';
-import PostCard from "@/Components/Social/PostCard.jsx";
+import React, { useState, useMemo } from 'react';
+import { Box, useMediaQuery, useTheme } from '@mui/material';
+import { StarBorder } from '@mui/icons-material';
+import { motion } from 'framer-motion';
+import { useQuery, useMutation, useInfiniteQuery, useQueryClient } from 'react-query';
+import { useParams, useNavigate } from 'react-router-dom';
+import { userActions, postActions, friendshipActions } from '@/api/actions';
+import { useAuth } from '@/Components/Auth/AuthProvider.jsx';
+import { useIsUserOnline } from '@/Components/Social/OnlineUsersProvider.jsx';
+import ProfileLoadingPlaceholder from '@/Components/Social/ProfileLoadingPlaceholder.jsx';
+import ProfileHeader from '@/Components/Social/ProfileHeader.jsx';
+import ProfileInfo from '@/Components/Social/ProfileInfo.jsx';
+import ProfileTabs from '@/Components/Social/ProfileTabs.jsx';
+import EditProfileDialog from '@/Components/Social/EditProfileDialog.jsx';
+import UserNotFound from '@/Components/Social/UserNotFound.jsx';
 
 const UserProfilePage = () => {
+    const { username } = useParams();
+    const { isAuthenticated, user } = useAuth();
+    const navigate = useNavigate();
+    const queryClient = useQueryClient();
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+    const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
+    const [activeTab, setActiveTab] = useState('posts');
+    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+    const [editForm, setEditForm] = useState({
+        username: '',
+        first_name: '',
+        last_name: '',
+        biography: '',
+        country: '',
+        birthday: '',
+        gender: '',
+        avatar: '',
+    });
+
+    const isOnline = useIsUserOnline(user?.id);
+
+    const formatLastSeen = () => {
+        if (isOnline) return 'Онлайн';
+        if (!profileUser?.last_seen_at) return 'Невідомо';
+
+        const lastSeen = new Date(profileUser.last_seen_at);
+        const now = new Date();
+        const diffHours = Math.floor((now - lastSeen) / (1000 * 60 * 60));
+
+        if (diffHours < 1) return 'Був(ла) нещодавно';
+        if (diffHours < 24) return `Був(ла) ${diffHours} год. тому`;
+        return `Був(ла) ${Math.floor(diffHours / 24)} дн. тому`;
+    };
+
+    const { data: profileUser, isLoading, isError } = useQuery(
+        ['user', username],
+        () => userActions.getUser(username).then((res) => res.data.data),
+        {
+            staleTime: 1000 * 60,
+            select: (data) => ({
+                id: data.id,
+                username: data.username,
+                first_name: data.first_name || '',
+                last_name: data.last_name || '',
+                email: data.email,
+                biography: data.biography || '',
+                country: data.country || '',
+                birthday: data.birthday || '',
+                gender: data.gender || '',
+                avatar: data.avatar || `https://i.pravatar.cc/150?img=${data.id}`,
+                is_online: data.is_online || false,
+                last_seen_at: data.last_seen_at || '',
+                created_at: data.created_at,
+                role: data.role || '',
+            }),
+        }
+    );
+
+    const { data: friendsData } = useQuery(
+        ['friends', username],
+        () => friendshipActions.getFriends(username).then((res) => res.data),
+        {
+            enabled: !!profileUser,
+            select: (data) =>
+                data.map((friend) => ({
+                    id: friend.id,
+                    username: friend.username,
+                    avatar: friend.avatar || `https://i.pravatar.cc/150?img=${friend.id}`,
+                    friendship_id: friend.friendship_id,
+                })),
+        }
+    );
+
+    const { data: sentRequests } = useQuery(
+        ['sentRequests', user?.username],
+        () => friendshipActions.getSentFriendRequests(user.username).then((res) => res.data),
+        { enabled: isAuthenticated && !!user }
+    );
+
+    const { data: receivedRequests } = useQuery(
+        ['receivedRequests', user?.username],
+        () => friendshipActions.getReceivedFriendRequests(user.username).then((res) => res.data),
+        { enabled: isAuthenticated && !!user }
+    );
+
+    const friendStatus = useMemo(() => {
+        if (!isAuthenticated || !profileUser || user.username === profileUser.username) return 'none';
+        if (friendsData?.some((friend) => friend.id === user.id)) {
+            return 'accepted';
+        }
+        const sentRequest = sentRequests?.find((req) => req.friend_id === profileUser.id);
+        if (sentRequest) {
+            return { status: 'pending_sent', friendshipId: sentRequest.id };
+        }
+        const receivedRequest = receivedRequests?.find((req) => req.user_id === profileUser.id);
+        if (receivedRequest) {
+            return { status: 'pending_received', friendshipId: receivedRequest.id };
+        }
+        return 'none';
+    }, [friendsData, sentRequests, receivedRequests, profileUser, user, isAuthenticated]);
+
+    const {
+        data: userPosts,
+        fetchNextPage: fetchNextPosts,
+        hasNextPage: hasNextPosts,
+        isFetchingNextPage: isFetchingNextPosts,
+    } = useInfiniteQuery(
+        ['userPosts', username],
+        ({ pageParam = null }) =>
+            postActions.getPosts({ 'filter[user.username]': username, perPage: 10, cursor: pageParam }).then((res) => res.data),
+        {
+            getNextPageParam: (lastPage) => lastPage.next_cursor || undefined,
+            enabled: !!profileUser,
+        }
+    );
+
+    const {
+        data: likedPosts,
+        fetchNextPage: fetchNextLikedPosts,
+        hasNextPage: hasNextLikedPosts,
+        isFetchingNextPage: isFetchingNextLikedPosts,
+    } = useInfiniteQuery(
+        ['likedPosts', username],
+        ({ pageParam = 1 }) => postActions.getLikedPosts(username, pageParam).then((res) => res.data),
+        {
+            getNextPageParam: (lastPage) => (lastPage.current_page < lastPage.last_page ? lastPage.current_page + 1 : undefined),
+            enabled: !!profileUser,
+        }
+    );
+
+    const updateUserMutation = useMutation(
+        (payload) => {
+            const formData = new FormData();
+            Object.entries(payload).forEach(([key, value]) => {
+                if (key === 'avatar' && value instanceof File) {
+                    formData.append('avatar', value);
+                } else if (value) {
+                    formData.append(key, value);
+                }
+            });
+            return userActions.updateUser(username, formData);
+        },
+        {
+            onSuccess: (response) => {
+                queryClient.setQueryData(['user', username], (oldData) => ({
+                    ...oldData,
+                    ...response.data,
+                    avatar: response.data.avatar || oldData.avatar,
+                }));
+                setIsEditDialogOpen(false);
+            },
+            onError: (error) => {
+                alert(`Помилка оновлення профілю: ${error.response?.data?.message || 'Щось пішло не так'}`);
+            },
+        }
+    );
+
+    const sendFriendRequestMutation = useMutation(
+        (payload) => friendshipActions.sendFriendRequest(payload),
+        {
+            onSuccess: () => queryClient.invalidateQueries(['sentRequests', user.username]),
+            onError: (error) => alert(`Помилка відправки запиту: ${error.response?.data?.message || 'Щось пішло не так'}`),
+        }
+    );
+
+    const acceptFriendRequestMutation = useMutation(
+        (friendshipId) => friendshipActions.acceptFriendRequest(friendshipId),
+        {
+            onSuccess: () => {
+                queryClient.invalidateQueries(['friends', username]);
+                queryClient.invalidateQueries(['receivedRequests', user.username]);
+            },
+            onError: (error) => alert(`Помилка прийняття запиту: ${error.response?.data?.message || 'Щось пішло не так'}`),
+        }
+    );
+
+    const rejectFriendRequestMutation = useMutation(
+        (friendshipId) => friendshipActions.rejectFriendRequest(friendshipId),
+        {
+            onSuccess: () => queryClient.invalidateQueries(['receivedRequests', user.username]),
+            onError: (error) => alert(`Помилка відхилення запиту: ${error.response?.data?.message || 'Щось пішло не так'}`),
+        }
+    );
+
+    const cancelFriendRequestMutation = useMutation(
+        (friendshipId) => friendshipActions.cancelFriendRequest(friendshipId),
+        {
+            onSuccess: () => queryClient.invalidateQueries(['sentRequests', user.username]),
+            onError: (error) => alert(`Помилка скасування запиту: ${error.response?.data?.message || 'Щось пішло не так'}`),
+        }
+    );
+
+    const removeFriendMutation = useMutation(
+        (friendshipId) => friendshipActions.removeFriend(friendshipId),
+        {
+            onSuccess: () => queryClient.invalidateQueries(['friends', username]),
+            onError: (error) => alert(`Помилка видалення друга: ${error.response?.data?.message || 'Щось пішло не так'}`),
+        }
+    );
+
+    const handleTabChange = (event, newValue) => setActiveTab(newValue);
+    const handleEditOpen = () => {
+        setEditForm({
+            username: profileUser.username,
+            first_name: profileUser.first_name,
+            last_name: profileUser.last_name,
+            biography: profileUser.biography,
+            country: profileUser.country,
+            birthday: profileUser.birthday,
+            gender: profileUser.gender,
+            avatar: profileUser.avatar,
+        });
+        setIsEditDialogOpen(true);
+    };
+    const handleEditClose = () => setIsEditDialogOpen(false);
+    const handleEditSave = () => {
+        if (editForm.username.trim() && editForm.biography !== '<p><br></p>') {
+            updateUserMutation.mutate(editForm);
+        }
+    };
+    const handleMessage = () => {
+        if (!isAuthenticated) return navigate('/login');
+        navigate(`/messages/${username}`);
+    };
+    const handleFriendAction = () => {
+        if (!isAuthenticated) return navigate('/login');
+        if (friendStatus === 'none') {
+            sendFriendRequestMutation.mutate({ friend_id: profileUser.id });
+        } else if (friendStatus.status === 'pending_sent') {
+            cancelFriendRequestMutation.mutate(friendStatus.friendshipId);
+        } else if (friendStatus.status === 'pending_received') {
+            acceptFriendRequestMutation.mutate(friendStatus.friendshipId);
+        } else if (friendStatus === 'accepted') {
+            const friendship = friendsData.find((friend) => friend.id === user.id);
+            if (friendship?.friendship_id) {
+                removeFriendMutation.mutate(friendship.friendship_id);
+            }
+        }
+    };
+    const handleRejectFriendRequest = () => {
+        if (friendStatus.status === 'pending_received') {
+            rejectFriendRequestMutation.mutate(friendStatus.friendshipId);
+        }
+    };
+
+    if (isLoading) {
+        return <ProfileLoadingPlaceholder />;
+    }
+
+    if (isError) {
+        return <UserNotFound />;
+    }
+
+    const isOwner = isAuthenticated && user.username === profileUser.username;
+
     return (
-        <div style={{marginTop: "15%", marginLeft: "25%", marginRight: "25%", marginBottom: "15%"}}>
-            <PostCard
-                userName="example_user"
-                userAvatar="https://example.com/avatar.jpg"
-                postTime="5 hours ago"
-                title="This is an example post title"
-                content="This is some example post content that might appear below the title. This is some example post content that might appear below the title. This is some example post content that might appear below the title. This is some example post content that might appear below the title. This is some example post content that might appear below the title. This is some example post content that might appear below the title. This is some example post content that might appear below the title. This is some example post content that might appear below the title. This is some example post content that might appear below the title. This is some example post content that might appear below the title. This is some example post content that might appear below the title. This is some example post content that might appear below the title. This is some example post content that might appear below the title. This is some example post content that might appear below the title. This is some example post content that might appear below the title."
-                media={[
-                    { type: 'image', url: 'https://images.unsplash.com/photo-1579353977828-2a4eab540b9a' },
-                    { type: 'image', url: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb' },
-                    { type: 'video', url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4' },
-                    { type: 'video', url: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4' },
-                ]}
-                likes={245}
-                comments={32}
-                views={1500}
-                subreddit="javascript"
-            />
-        </div>
+        <Box
+            sx={{
+                minHeight: '100vh',
+                background: 'linear-gradient(180deg, rgba(10, 10, 15, 0.95) 0%, rgba(20, 20, 30, 0.9) 100%)',
+                position: 'relative',
+                overflow: 'hidden',
+                px: { xs: 1, sm: 2, md: 4 },
+                py: 4,
+            }}
+        >
+            {[...Array(5)].map((_, i) => (
+                <StarBorder
+                    key={i}
+                    sx={{
+                        position: 'absolute',
+                        top: `${20 + i * 15}%`,
+                        left: `${10 + i * 20}%`,
+                        color: 'rgba(156, 39, 176, 0.3)',
+                        fontSize: { xs: '1rem', sm: '1.5rem' },
+                        animation: 'twinkle 3s infinite',
+                        animationDelay: `${i * 0.5}s`,
+                        '@keyframes twinkle': {
+                            '0%, 100%': { opacity: 0.3 },
+                            '50%': { opacity: 0.8 },
+                        },
+                    }}
+                />
+            ))}
+            <svg
+                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+                preserveAspectRatio="none"
+            >
+                <defs>
+                    <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" style={{ stopColor: '#9c27b0', stopOpacity: 0.3 }} />
+                        <stop offset="100%" style={{ stopColor: 'transparent', stopOpacity: 0 }} />
+                    </linearGradient>
+                </defs>
+                <path
+                    d="M0,100 Q500,50 1000,150 T2000,100"
+                    stroke="url(#lineGradient)"
+                    strokeWidth="2"
+                    fill="none"
+                    style={{ opacity: 0.5 }}
+                />
+            </svg>
+            <Box sx={{ maxWidth: '1200px', mx: 'auto', position: 'relative' }}>
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5 }}
+                >
+                    <ProfileHeader
+                        profileUser={profileUser}
+                        isOwner={isOwner}
+                        isAuthenticated={isAuthenticated}
+                        friendStatus={friendStatus}
+                        handleMessage={handleMessage}
+                        handleFriendAction={handleFriendAction}
+                        handleRejectFriendRequest={handleRejectFriendRequest}
+                        handleEditOpen={handleEditOpen}
+                        isMobile={isMobile}
+                        isOnline={isOnline}
+                        formatLastSeen={formatLastSeen}
+                    />
+                    <ProfileInfo profileUser={profileUser} isMobile={isMobile} />
+                    <ProfileTabs
+                        activeTab={activeTab}
+                        handleTabChange={handleTabChange}
+                        friendsData={friendsData}
+                        userPosts={userPosts}
+                        likedPosts={likedPosts}
+                        hasNextPosts={hasNextPosts}
+                        hasNextLikedPosts={hasNextLikedPosts}
+                        isFetchingNextPosts={isFetchingNextPosts}
+                        isFetchingNextLikedPosts={isFetchingNextLikedPosts}
+                        fetchNextPosts={fetchNextPosts}
+                        fetchNextLikedPosts={fetchNextLikedPosts}
+                        navigate={navigate}
+                        isMobile={isMobile}
+                    />
+                </motion.div>
+                <EditProfileDialog
+                    open={isEditDialogOpen}
+                    onClose={handleEditClose}
+                    editForm={editForm}
+                    setEditForm={setEditForm}
+                    handleEditSave={handleEditSave}
+                    isMobile={isMobile}
+                    isTablet={isTablet}
+                    updateUserMutation={updateUserMutation}
+                />
+            </Box>
+        </Box>
     );
 };
 

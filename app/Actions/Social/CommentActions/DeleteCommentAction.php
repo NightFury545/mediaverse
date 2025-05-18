@@ -3,8 +3,10 @@
 namespace App\Actions\Social\CommentActions;
 
 use App\Models\Comment;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Exception;
+use Illuminate\Support\Facades\Schema;
 
 class DeleteCommentAction
 {
@@ -23,7 +25,13 @@ class DeleteCommentAction
         DB::beginTransaction();
 
         try {
+            $commentable = $comment->commentable;
+
             $comment->delete();
+
+            if ($commentable) {
+                $this->decrementLikesCountIfApplicable($commentable);
+            }
 
             DB::commit();
             return true;
@@ -31,6 +39,19 @@ class DeleteCommentAction
             DB::rollBack();
 
             throw new Exception('Помилка під час видалення коментаря: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Зменшує лічильник likes_count у моделі, якщо така властивість існує.
+     *
+     * @param Model $commentable
+     * @return void
+     */
+    private function decrementLikesCountIfApplicable(Model $commentable): void
+    {
+        if (Schema::hasColumn($commentable->getTable(), 'comments_count')) {
+            $commentable->decrement('comments_count');
         }
     }
 }

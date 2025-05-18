@@ -6,6 +6,7 @@ const userUrls = {
     update: (userId) => `${BASE_URL}/${userId}`,
     delete: (userId) => `${BASE_URL}/${userId}`,
     me: `${BASE_URL}/me`,
+    top: `${BASE_URL}/top`,
 };
 
 export default userUrls;

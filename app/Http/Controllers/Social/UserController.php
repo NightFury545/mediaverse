@@ -54,7 +54,7 @@ class UserController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
-            $perPage = $request->get('perPage', 20);
+            $perPage = $request->get('perPage', 10);
 
             $users = $this->userService->getUsers($perPage);
 
@@ -118,6 +118,26 @@ class UserController extends Controller
         } catch (Exception $e) {
             return response()->json([
                 'error' => 'Failed to get user: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Get the top 10 most active users.
+     *
+     * @return JsonResponse
+     */
+    public function topUsers(): JsonResponse
+    {
+        try {
+            $topUsers = $this->userService->getTopUsers();
+
+            return response()->json([
+                'data' => $topUsers,
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                'error' => 'Failed to fetch top users: ' . $e->getMessage(),
             ], 500);
         }
     }

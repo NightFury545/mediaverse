@@ -22,6 +22,7 @@ import { useAuth } from "@/Components/Auth/AuthProvider.jsx";
 import UserMenu from "@/Components/Social/UserMenu.jsx";
 import { useAuthModal } from "@/Components/Auth/AuthModalProvider.jsx";
 import NotificationsBell from "@/Components/Social/NotificationsBell.jsx";
+import {People} from "@mui/icons-material";
 
 const Navbar = () => {
     const navigate = useNavigate();
@@ -100,8 +101,8 @@ const Navbar = () => {
             case "Чати":
                 navigate("/chats");
                 break;
-            case "Коментарі":
-                navigate("/comments");
+            case "Користувачі":
+                navigate("/users");
                 break;
             case "Новинки":
                 navigate("/movies/new");
@@ -192,7 +193,7 @@ const Navbar = () => {
         "Форум": <ForumIcon fontSize="small" sx={{ fontSize: "20px" }} />,
         "Чати": <ChatIcon fontSize="small" sx={{ fontSize: "20px" }} />,
         "Пости": <PostIcon fontSize="small" sx={{ fontSize: "20px" }} />,
-        "Коментарі": <CommentIcon fontSize="small" sx={{ fontSize: "20px" }} />,
+        "Користувачі": <People fontSize="small" sx={{ fontSize: "20px" }} />,
         "Новинки": <StarIcon fontSize="small" sx={{ fontSize: "20px" }} />,
         "Популярне": <WhatshotIcon fontSize="small" sx={{ fontSize: "20px" }} />,
         "Жанри": <CategoryIcon fontSize="small" sx={{ fontSize: "20px" }} />,
@@ -200,7 +201,7 @@ const Navbar = () => {
 
     const menuStructure = {
         "Головна": [],
-        "Мережа": ["Чати", "Пости", "Коментарі"],
+        "Мережа": ["Чати", "Пости", "Користувачі"],
         "Фільми": ["Новинки", "Популярне", "Жанри"],
         "Форум": []
     };

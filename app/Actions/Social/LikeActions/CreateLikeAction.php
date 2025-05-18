@@ -71,10 +71,10 @@ class CreateLikeAction
     /**
      * Перевіряє, чи можна поставити лайк (в залежності від стану сутності).
      *
-     * @param Post|Movie $likeable
+     * @param Post|Movie|Comment $likeable
      * @throws Exception
      */
-    private function ensureCanBeLiked(Post|Movie $likeable): void
+    private function ensureCanBeLiked(Post|Movie|Comment $likeable): void
     {
         if (Schema::hasColumn($likeable->getTable(), 'likes_enabled') && !$likeable->likes_enabled) {
             throw new Exception('Лайки вимкнені для цієї сутності.');
@@ -117,10 +117,10 @@ class CreateLikeAction
     /**
      * Перевіряє, чи вже існує лайк.
      *
-     * @param Post|Movie $likeable
+     * @param Post|Movie|Comment $likeable
      * @return Like|null
      */
-    private function checkIfAlreadyLiked(Post|Movie $likeable): ?Like
+    private function checkIfAlreadyLiked(Post|Movie|Comment $likeable): ?Like
     {
         return Like::where('user_id', Auth::id())
             ->where('likeable_id', $likeable->getKey())
@@ -131,10 +131,10 @@ class CreateLikeAction
     /**
      * Надсилає сповіщення автору сутності, якщо дозволено.
      *
-     * @param Post|Movie $likeable
+     * @param Post|Movie|Comment $likeable
      * @param Like $like
      */
-    private function sendLikeNotificationIfEnabled(Post|Movie $likeable, Like $like): void
+    private function sendLikeNotificationIfEnabled(Post|Movie|Comment $likeable, Like $like): void
     {
         if (!Schema::hasColumn($likeable->getTable(), 'user_id')) {
             return;

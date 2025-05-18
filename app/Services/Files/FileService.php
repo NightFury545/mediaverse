@@ -3,10 +3,12 @@
 namespace App\Services\Files;
 
 use App\Enums\FileExtension;
+use Exception;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Intervention\Image\Image;
+use Intervention\Image\Drivers\Gd\Driver;
+use Intervention\Image\ImageManager;
 
 class FileService
 {
@@ -20,14 +22,12 @@ class FileService
      */
     public function saveFile(UploadedFile $file, string $folder = 'attachments', string $disk = 'public'): string
     {
-        if (in_array($file->getClientOriginalExtension(), FileExtension::getImageExtensions())) {
+        if (in_array(strtolower($file->getClientOriginalExtension()), FileExtension::getImageExtensions())) {
             $file = $this->convertToWebp($file);
         }
 
         $fileName = Str::uuid() . '.' . $file->getClientOriginalExtension();
-        $path = Storage::disk($disk)->putFileAs($folder, $file, $fileName);
-
-        return $disk === 'public' ? Storage::disk($disk)->url($path) : $path;
+        return Storage::disk($disk)->putFileAs($folder, $file, $fileName);
     }
 
     /**
@@ -69,17 +69,22 @@ class FileService
      */
     protected function convertToWebp(UploadedFile $file, int $quality = 90): UploadedFile
     {
-        $image = Image::make($file->getPathname())->encode('webp', $quality);
+        try {
+            $manager = new ImageManager(new Driver());
+            $image = $manager->read($file->getPathname())->toWebp($quality);
 
-        $tmpPath = tempnam(sys_get_temp_dir(), 'webp_') . '.webp';
-        $image->save($tmpPath);
+            $tmpPath = tempnam(sys_get_temp_dir(), 'webp_') . '.webp';
+            $image->save($tmpPath);
 
-        return new UploadedFile(
-            $tmpPath,
-            pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME) . '.webp',
-            'image/webp',
-            null,
-            true
-        );
+            return new UploadedFile(
+                $tmpPath,
+                pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME) . '.webp',
+                'image/webp',
+                null,
+                true
+            );
+        } catch (Exception $e) {
+            return $file;
+        }
     }
 }

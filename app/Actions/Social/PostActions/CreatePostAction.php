@@ -41,7 +41,7 @@ class CreatePostAction
             return $post;
         } catch (Exception $e) {
             DB::rollBack();
-            throw new Exception('Помилка під час створення поста. Можлива проблема з базою даних або файлами.');
+            throw new Exception('Помилка під час створення поста. Можлива проблема з базою даних або файлами.' . $e->getMessage());
         }
     }
 
@@ -70,15 +70,21 @@ class CreatePostAction
      * @param Post $post Пост, до якого додаються теги
      * @param array $tags Массив тегів для синхронізації
      * @return void
+     * @throws Exception
      */
     private function syncTags(Post $post, array $tags): void
     {
-        $tagIds = Tag::whereIn('name', $tags)->pluck('id', 'name');
+        try {
+            $tags = array_filter(array_map('strtolower', $tags), fn($tag) => !empty(trim($tag)));
 
-        $newTags = collect($tags)->diff($tagIds->keys())->mapWithKeys(
-            fn($tag) => [Tag::create(['name' => $tag])->id => $tag]
-        );
+            $tagIds = collect($tags)->map(function ($tag) {
+                $tagModel = Tag::firstOrCreate(['name' => $tag]);
+                return $tagModel->id;
+            })->filter()->unique()->values()->toArray();
 
-        $post->tags()->sync($tagIds->merge($newTags)->keys());
+            $post->tags()->sync($tagIds);
+        } catch (Exception $e) {
+            throw new Exception('Помилка синхронізації тегів. ');
+        }
     }
 }

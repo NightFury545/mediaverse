@@ -7,8 +7,8 @@ use App\Models\Movie;
 use App\Models\Post;
 use App\Models\User;
 use Exception;
+use Illuminate\Contracts\Pagination\CursorPaginator;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
@@ -20,17 +20,17 @@ class GetCommentsAction
      *
      * @param Movie|Post $commentable Об'єкт, який підтримує коментарі (наприклад, Post, Movie)
      * @param int $perPage Кількість коментарів на сторінку
-     * @return LengthAwarePaginator Пагінований список коментарів
+     * @return CursorPaginator Пагінований список коментарів
      * @throws Exception
      */
-    public function __invoke(Movie|Post $commentable, int $perPage = 20): LengthAwarePaginator
+    public function __invoke(Movie|Post $commentable, int $perPage = 20): CursorPaginator
     {
         try {
             $this->checkVisibility($commentable);
 
             return $this->applyPagination(
                 $this->applySorting(
-                    $this->applyFilters($commentable->comments()->with(['user:id,username,first_name,last_name,avatar'])
+                    $this->applyFilters($commentable->comments()->with(['user:id,username,first_name,last_name,avatar'])->withCount('replies')
                     )
                 ),
                 $perPage
@@ -51,7 +51,7 @@ class GetCommentsAction
         return QueryBuilder::for(
             $query->whereNull('parent_id')
         )->allowedFilters([
-            AllowedFilter::exact('user_id'),
+            AllowedFilter::partial('user.username'),
             AllowedFilter::partial('content'),
             AllowedFilter::custom('created_at', new RangeFilter()),
             AllowedFilter::custom('likes_count', new RangeFilter()),
@@ -77,11 +77,11 @@ class GetCommentsAction
      *
      * @param QueryBuilder $query Запит, до якого буде застосована пагінація
      * @param int $perPage Кількість елементів на сторінці для пагінації
-     * @return LengthAwarePaginator Пагінований результат
+     * @return CursorPaginator Пагінований результат
      */
-    private function applyPagination(QueryBuilder $query, int $perPage): LengthAwarePaginator
+    private function applyPagination(QueryBuilder $query, int $perPage): CursorPaginator
     {
-        return $query->paginate($perPage);
+        return $query->cursorPaginate($perPage)->withQueryString();
     }
 
     /**

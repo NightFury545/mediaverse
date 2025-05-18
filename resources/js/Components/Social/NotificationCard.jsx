@@ -26,7 +26,6 @@ const NotificationCard = ({ notification, onDelete }) => {
 
     const renderMessage = () => {
         const { message } = notification.data;
-
         try {
             return (
                 <Typography
@@ -154,7 +153,7 @@ const NotificationCard = ({ notification, onDelete }) => {
                             mr: { xs: 1, sm: 1.5 },
                         }}
                     >
-                        {getIcon(notification.data.type)}
+                        {getIcon(notification.data?.type)}
                     </Box>
                 </motion.div>
 

@@ -5,7 +5,8 @@ namespace App\Actions\Social\UserActions;
 use App\Actions\Filters\RangeFilter;
 use App\Models\User;
 use Exception;
-use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Pagination\CursorPaginator;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -19,10 +20,10 @@ class GetUsersAction
      * сортування та пагінацію, а потім повертає результат у вигляді пагінованого списку.
      *
      * @param int $perPage Кількість користувачів на сторінці (за замовчуванням 20)
-     * @return LengthAwarePaginator Пагінований список користувачів
+     * @return CursorPaginator Пагінований список користувачів
      * @throws Exception Якщо сталася помилка при отриманні користувачів
      */
-    public function __invoke(int $perPage = 20): LengthAwarePaginator
+    public function __invoke(int $perPage = 10): CursorPaginator
     {
         try {
             return $this->applyPagination(
@@ -56,9 +57,13 @@ class GetUsersAction
             AllowedFilter::exact('gender'),
             AllowedFilter::exact('is_online'),
             AllowedFilter::custom('birthday', new RangeFilter()),
-            AllowedFilter::partial('username'),
-            AllowedFilter::partial('first_name'),
-            AllowedFilter::partial('last_name'),
+            AllowedFilter::callback('username', function (Builder $query, $value) {
+                $query->where(function (Builder $query) use ($value) {
+                    $query->where('username', 'LIKE', '%' . $value . '%')
+                        ->orWhere('first_name', 'LIKE', '%' . $value . '%')
+                        ->orWhere('last_name', 'LIKE', '%' . $value . '%');
+                });
+            }),
         ]);
     }
 
@@ -81,6 +86,7 @@ class GetUsersAction
             'first_name',
             'last_name',
             'birthday',
+            'created_at'
         ]);
     }
 
@@ -91,10 +97,10 @@ class GetUsersAction
      *
      * @param QueryBuilder $query Запит для застосування пагінації
      * @param int $perPage Кількість елементів на сторінці
-     * @return LengthAwarePaginator Пагінований список користувачів
+     * @return CursorPaginator Пагінований список користувачів
      */
-    private function applyPagination(QueryBuilder $query, int $perPage): LengthAwarePaginator
+    private function applyPagination(QueryBuilder $query, int $perPage): CursorPaginator
     {
-        return $query->paginate($perPage);
+        return $query->cursorPaginate($perPage)->withQueryString();
     }
 }

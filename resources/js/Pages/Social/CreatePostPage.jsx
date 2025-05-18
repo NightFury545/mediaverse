@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {motion} from 'framer-motion';
 import {
     Box,
@@ -29,7 +29,6 @@ import {useAuth} from '@/Components/Auth/AuthProvider.jsx';
 import {useNavigate} from 'react-router-dom';
 import {toast} from 'react-toastify';
 
-// Статичний масив для зірочок
 const stars = [...Array(20)].map((_, i) => ({
     id: i,
     size: Math.random() * 3 + 1,
@@ -44,8 +43,6 @@ const PostCreatePage = () => {
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const {isAuthenticated, user} = useAuth();
     const navigate = useNavigate();
-
-    // Стан форми
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
     const [visibility, setVisibility] = useState('public');
@@ -56,19 +53,17 @@ const PostCreatePage = () => {
     const [newTag, setNewTag] = useState('');
     const [openPreview, setOpenPreview] = useState(false);
 
-    // Доступні теги
     const [availableTags, setAvailableTags] = useState([
         'gaming', 'news', 'tech', 'art', 'science', 'sports', 'coding', 'culture', 'music', 'travel', 'food'
     ]);
 
-    // API-мутація для створення поста
     const createPostMutation = useMutation(postActions.createPost, {
         onSuccess: (response) => {
             toast.success('Пост успішно створено!');
-            navigate(`/posts/${response.data.slug}`);
+            navigate(`/posts/${response.data.data.slug}`);
         },
         onError: (error) => {
-            toast.error(error.response?.data?.message || 'Помилка створення поста');
+            toast.error(error.response?.data?.error || 'Помилка створення поста');
         },
     });
 
@@ -139,7 +134,13 @@ const PostCreatePage = () => {
         setMediaPreviews(newPreviews);
     };
 
-    // Обробка відправки форми
+    useEffect(() => {
+        window.scrollTo({
+            top: 0,
+            behavior: 'instant',
+        });
+    }, []);
+
     const handleSubmit = () => {
         if (title.length < 3 || title.length > 100) {
             toast.error('Заголовок має бути від 3 до 100 символів');
@@ -160,8 +161,6 @@ const PostCreatePage = () => {
 
         createPostMutation.mutate(formData);
     };
-
-    // Drag-and-drop для медіа
     const handleDragOver = (e) => {
         e.preventDefault();
         e.currentTarget.style.backgroundColor = 'rgba(156, 39, 176, 0.2)';
@@ -177,7 +176,6 @@ const PostCreatePage = () => {
         handleMediaUpload(e);
     };
 
-    // Попередній перегляд поста
     const previewPost = {
         id: 'preview',
         title: title || 'Ваш заголовок',
@@ -198,7 +196,6 @@ const PostCreatePage = () => {
         comments_enabled: commentsEnabled,
     };
 
-    // Кастомний стиль для ReactQuill
     const quillStyles = `
         .ql-container {
             background: rgba(10, 10, 15, 0.9);

@@ -12,10 +12,10 @@ trait ProcessesAttachments
      *
      * @param array $attachments Масив файлів для обробки.
      * @param string $visibility Видимість файлу (public, private, friends, тощо).
-     * @return string|null JSON-рядок із збереженими файлами або null, якщо вкладень немає.
+     * @return array|null JSON-рядок із збереженими файлами або null, якщо вкладень немає.
      * @throws Exception
      */
-    private function processAttachments(array $attachments, string $visibility): ?string
+    private function processAttachments(array $attachments, string $visibility): ?array
     {
         try {
             if (empty($attachments)) {
@@ -29,7 +29,7 @@ trait ProcessesAttachments
                 $processedFiles[] = FileFacade::saveFile($file, disk: $storageDisk);
             }
 
-            return json_encode($processedFiles);
+            return $processedFiles;
         } catch (Exception $e) {
             throw new Exception('Помилка під час обробки файлів. Можлива проблема з збереженням файлів.');
         }
