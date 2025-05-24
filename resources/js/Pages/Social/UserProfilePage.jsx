@@ -4,7 +4,7 @@ import { StarBorder } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { useQuery, useMutation, useInfiniteQuery, useQueryClient } from 'react-query';
 import { useParams, useNavigate } from 'react-router-dom';
-import { userActions, postActions, friendshipActions } from '@/api/actions';
+import { userActions, postActions, friendshipActions, chatActions } from '@/api/actions';
 import { useAuth } from '@/Components/Auth/AuthProvider.jsx';
 import { useIsUserOnline } from '@/Components/Social/OnlineUsersProvider.jsx';
 import ProfileLoadingPlaceholder from '@/Components/Social/ProfileLoadingPlaceholder.jsx';
@@ -13,10 +13,11 @@ import ProfileInfo from '@/Components/Social/ProfileInfo.jsx';
 import ProfileTabs from '@/Components/Social/ProfileTabs.jsx';
 import EditProfileDialog from '@/Components/Social/EditProfileDialog.jsx';
 import UserNotFound from '@/Components/Social/UserNotFound.jsx';
+import { toast } from 'react-toastify';
 
 const UserProfilePage = () => {
     const { username } = useParams();
-    const { isAuthenticated, user } = useAuth();
+    const { isAuthenticated, user, setUser } = useAuth();
     const navigate = useNavigate();
     const queryClient = useQueryClient();
     const theme = useTheme();
@@ -79,6 +80,7 @@ const UserProfilePage = () => {
         () => friendshipActions.getFriends(username).then((res) => res.data),
         {
             enabled: !!profileUser,
+            retry: false,
             select: (data) =>
                 data.map((friend) => ({
                     id: friend.id,
@@ -140,6 +142,7 @@ const UserProfilePage = () => {
                         likes_count: post.likes_count || 0,
                         comments_count: post.comments_count || 0,
                         views_count: post.views_count || 0,
+                        visibility: post.visibility || 'public',
                         created_at: post.created_at,
                         user: {
                             id: post.user?.id,
@@ -178,6 +181,7 @@ const UserProfilePage = () => {
                         slug: post.slug,
                         likes_count: post.likes_count || 0,
                         comments_count: post.comments_count || 0,
+                        visibility: post.visibility || 'public',
                         created_at: post.created_at,
                         user: {
                             id: post.user?.id,
@@ -186,8 +190,8 @@ const UserProfilePage = () => {
                         },
                         tags: post.tags ? post.tags.map((tag) => tag.name) : [],
                         attachments: post.attachments || [],
-                        user_liked: post.user_liked || false, // Додано для бекенд-рішення
-                        like_id: post.like_id || null, // Додано для бекенд-рішення
+                        user_liked: post.user_liked || false,
+                        like_id: post.like_id || null,
                     })),
                 })),
                 pageParams: data.pageParams,
@@ -195,29 +199,71 @@ const UserProfilePage = () => {
         }
     );
 
+    const createChatMutation = useMutation(
+        (payload) => chatActions.createChat(payload),
+        {
+            onSuccess: (response) => {
+                const chatId = response.data.data.id;
+                navigate(`/chats/${chatId}`);
+            },
+            onError: (error) => {
+                toast.error(error.response?.data?.error || 'Щось пішло не так');
+            },
+        }
+    );
+
+    const handleEditSave = () => {
+        if (!editForm.username || editForm.username.length < 3 || editForm.username.length > 50) {
+            toast.error('Ім\'я користувача має бути від 3 до 50 символів');
+            return;
+        }
+        if (editForm.biography && editForm.biography.replace(/<(.|\n)*?>/g, '').length > 1000) {
+            toast.error('Біографія не може перевищувати 1000 символів');
+            return;
+        }
+        if (editForm.first_name && editForm.first_name.length > 50) {
+            toast.error('Ім\'я не може перевищувати 50 символів');
+            return;
+        }
+        if (editForm.last_name && editForm.last_name.length > 50) {
+            toast.error('Прізвище не може перевищувати 50 символів');
+            return;
+        }
+
+        const formData = new FormData();
+        if (editForm.username) formData.append('username', editForm.username);
+        if (editForm.first_name) formData.append('first_name', editForm.first_name);
+        if (editForm.last_name) formData.append('last_name', editForm.last_name);
+        if (editForm.biography && editForm.biography !== '<p><br></p>') {
+            formData.append('biography', editForm.biography);
+        }
+        if (editForm.country) formData.append('country', editForm.country);
+        if (editForm.birthday) formData.append('birthday', editForm.birthday);
+        if (editForm.gender) formData.append('gender', editForm.gender);
+        if (editForm.avatar instanceof File) {
+            formData.append('avatar', editForm.avatar);
+        }
+
+        updateUserMutation.mutate(formData);
+    };
+
     const updateUserMutation = useMutation(
-        (payload) => {
-            const formData = new FormData();
-            Object.entries(payload).forEach(([key, value]) => {
-                if (key === 'avatar' && value instanceof File) {
-                    formData.append('avatar', value);
-                } else if (value) {
-                    formData.append(key, value);
-                }
-            });
-            return userActions.updateUser(username, formData);
-        },
+        (formData) => userActions.updateUser(user.id, formData),
         {
             onSuccess: (response) => {
                 queryClient.setQueryData(['user', username], (oldData) => ({
                     ...oldData,
-                    ...response.data,
-                    avatar: response.data.avatar || oldData.avatar,
+                    ...response.data.data,
+                    avatar: response.data.data.avatar || oldData.avatar,
                 }));
                 setIsEditDialogOpen(false);
+                setUser(response.data.data);
+                localStorage.setItem('user', JSON.stringify(response.data.data));
+                toast.success('Профіль успішно оновлено');
             },
             onError: (error) => {
-                alert(`Помилка оновлення профілю: ${error.response?.data?.message || 'Щось пішло не так'}`);
+                const errorMessage = error.response?.data?.message || 'Помилка оновлення профілю';
+                toast.error(errorMessage);
             },
         }
     );
@@ -226,7 +272,9 @@ const UserProfilePage = () => {
         (payload) => friendshipActions.sendFriendRequest(payload),
         {
             onSuccess: () => queryClient.invalidateQueries(['sentRequests', user.username]),
-            onError: (error) => alert(`Помилка відправки запиту: ${error.response?.data?.message || 'Щось пішло не так'}`),
+            onError: (error) => {
+                toast.error(`Помилка відправки запиту: ${error.response?.data?.message || 'Щось пішло не так'}`);
+            },
         }
     );
 
@@ -237,7 +285,9 @@ const UserProfilePage = () => {
                 queryClient.invalidateQueries(['friends', username]);
                 queryClient.invalidateQueries(['receivedRequests', user.username]);
             },
-            onError: (error) => alert(`Помилка прийняття запиту: ${error.response?.data?.message || 'Щось пішло не так'}`),
+            onError: (error) => {
+                toast.error(`Помилка прийняття запиту: ${error.response?.data?.message || 'Щось пішло не так'}`);
+            },
         }
     );
 
@@ -245,7 +295,9 @@ const UserProfilePage = () => {
         (friendshipId) => friendshipActions.rejectFriendRequest(friendshipId),
         {
             onSuccess: () => queryClient.invalidateQueries(['receivedRequests', user.username]),
-            onError: (error) => alert(`Помилка відхилення запиту: ${error.response?.data?.message || 'Щось пішло не так'}`),
+            onError: (error) => {
+                toast.error(`Помилка відхилення запиту: ${error.response?.data?.message || 'Щось пішло не так'}`);
+            },
         }
     );
 
@@ -253,7 +305,9 @@ const UserProfilePage = () => {
         (friendshipId) => friendshipActions.cancelFriendRequest(friendshipId),
         {
             onSuccess: () => queryClient.invalidateQueries(['sentRequests', user.username]),
-            onError: (error) => alert(`Помилка скасування запиту: ${error.response?.data?.message || 'Щось пішло не так'}`),
+            onError: (error) => {
+                toast.error(`Помилка скасування запиту: ${error.response?.data?.message || 'Щось пішло не так'}`);
+            },
         }
     );
 
@@ -261,7 +315,9 @@ const UserProfilePage = () => {
         (friendshipId) => friendshipActions.removeFriend(friendshipId),
         {
             onSuccess: () => queryClient.invalidateQueries(['friends', username]),
-            onError: (error) => alert(`Помилка видалення друга: ${error.response?.data?.message || 'Щось пішло не так'}`),
+            onError: (error) => {
+                toast.error(`Помилка видалення друга: ${error.response?.data?.message || 'Щось пішло не так'}`);
+            },
         }
     );
 
@@ -280,14 +336,8 @@ const UserProfilePage = () => {
         setIsEditDialogOpen(true);
     };
     const handleEditClose = () => setIsEditDialogOpen(false);
-    const handleEditSave = () => {
-        if (editForm.username.trim() && editForm.biography !== '<p><br></p>') {
-            updateUserMutation.mutate(editForm);
-        }
-    };
-    const handleMessage = () => {
-        if (!isAuthenticated) return navigate('/login');
-        navigate(`/messages/${username}`);
+    const handleCreateChat = () => {
+        createChatMutation.mutate({ user_two_id: profileUser.id });
     };
     const handleFriendAction = () => {
         if (!isAuthenticated) return navigate('/login');
@@ -378,13 +428,14 @@ const UserProfilePage = () => {
                         isOwner={isOwner}
                         isAuthenticated={isAuthenticated}
                         friendStatus={friendStatus}
-                        handleMessage={handleMessage}
+                        handleMessage={handleCreateChat}
                         handleFriendAction={handleFriendAction}
                         handleRejectFriendRequest={handleRejectFriendRequest}
                         handleEditOpen={handleEditOpen}
                         isMobile={isMobile}
                         isOnline={isOnline}
                         formatLastSeen={formatLastSeen}
+                        isCreatingChat={createChatMutation.isLoading}
                     />
                     <ProfileInfo profileUser={profileUser} isMobile={isMobile} />
                     <ProfileTabs

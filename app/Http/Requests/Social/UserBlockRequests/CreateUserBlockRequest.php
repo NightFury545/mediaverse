@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests\Social\UserBlock;
+namespace App\Http\Requests\Social\UserBlockRequests;
 
 use App\Enums\BlockReason;
 use Illuminate\Foundation\Http\FormRequest;

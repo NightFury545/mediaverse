@@ -135,7 +135,7 @@ class CreateCommentAction
      */
     private function sendCommentNotificationIfEnabled(Movie|Post $commentable, Comment $comment): void
     {
-        if (!Schema::hasColumn($commentable->getTable(), 'user_id')) {
+        if (!Schema::hasColumn($commentable->getTable(), 'user_id') || $comment->parent_id !== null) {
             return;
         }
 

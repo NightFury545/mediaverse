@@ -8,7 +8,7 @@ use App\Actions\Social\MessageActions\GetMessagesAction;
 use App\Actions\Social\MessageActions\UpdateMessageAction;
 use App\Models\Chat;
 use App\Models\Message;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\CursorPaginator;
 
 class MessageService
 {
@@ -30,8 +30,10 @@ class MessageService
         ($this->deleteMessageAction)($message);
     }
 
-    public function getMessages(Chat $chat, int $perPage = 20): LengthAwarePaginator
-    {
+    public function getMessages(
+        Chat $chat,
+        int $perPage = 20,
+    ): CursorPaginator {
         return ($this->getMessagesAction)($chat, $perPage);
     }
 

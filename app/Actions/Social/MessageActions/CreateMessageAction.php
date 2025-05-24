@@ -48,11 +48,13 @@ class CreateMessageAction
 
             $message = $this->createMessage($data, $attachments);
 
+            $message->load('user');
+
             ($this->updateChatAction)($message->chat, [
                 'last_message' => $message->content,
             ]);
 
-            broadcast(new MessageSentEvent($message));
+            broadcast(new MessageSentEvent($message))->toOthers();
 
             DB::commit();
 
@@ -102,7 +104,7 @@ class CreateMessageAction
      * @param int $currentUserId ID поточного користувача.
      * @throws Exception Якщо один з користувачів заблокував іншого.
      */
-    private function ensureUsersNotBlocked(Chat $chat, int $currentUserId): void
+    private function ensureUsersNotBlocked(Chat $chat, string $currentUserId): void
     {
         /** @var User $currentUser */
         $currentUser = Auth::user();

@@ -4,7 +4,7 @@ namespace App\Actions\Social\ChatActions;
 
 use App\Models\Chat;
 use Exception;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Contracts\Pagination\CursorPaginator;
 use Spatie\QueryBuilder\QueryBuilder;
 use Spatie\QueryBuilder\AllowedFilter;
 
@@ -15,10 +15,10 @@ class GetChatsAction
      * Підтримує пагінацію.
      *
      * @param int $perPage Кількість чатів на сторінці
-     * @return LengthAwarePaginator Пагіновані результати чатів
+     * @return CursorPaginator Пагіновані результати чатів
      * @throws Exception Якщо виникає помилка під час отримання чатів
      */
-    public function __invoke(int $perPage = 20): LengthAwarePaginator
+    public function __invoke(int $perPage = 20): CursorPaginator
     {
         try {
             $query = $this->buildBaseQuery();

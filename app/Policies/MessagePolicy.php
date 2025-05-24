@@ -55,7 +55,7 @@ class MessagePolicy
      */
     public function update(User $user, Message $message): bool
     {
-        return $user->id === $message->user_id;
+        return $message->chat->user_one_id === $user->id || $message->chat->user_two_id === $user->id;
     }
 
     /**

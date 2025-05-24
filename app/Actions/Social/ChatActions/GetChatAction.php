@@ -18,8 +18,8 @@ class GetChatAction
     public function __invoke(string $chatId): Chat
     {
         return Chat::with([
-            'userOne:id,username,avatar,is_online,last_seen_at',
-            'userTwo:id,username,avatar,is_online,last_seen_at',
+            'userOne:id,first_name,last_name,username,avatar,is_online,last_seen_at',
+            'userTwo:id,first_name,last_name,username,avatar,is_online,last_seen_at',
             'messages' => function ($query) {
                 $query->latest()->limit(10);
             }

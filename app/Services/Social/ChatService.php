@@ -9,7 +9,7 @@ use App\Actions\Social\ChatActions\GetChatsAction;
 use App\Actions\Social\ChatActions\UpdateChatAction;
 use App\Models\Chat;
 use Exception;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Contracts\Pagination\CursorPaginator;
 
 class ChatService
 {
@@ -49,7 +49,7 @@ class ChatService
     /**
      * @throws Exception
      */
-    public function getChats(int $perPage = 20): LengthAwarePaginator
+    public function getChats(int $perPage = 20): CursorPaginator
     {
         return ($this->getChatsAction)($perPage);
     }

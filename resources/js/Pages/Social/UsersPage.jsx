@@ -498,7 +498,7 @@ const UsersPage = () => {
                             >
                                 <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3, mb: 6 }}>
                                     <CircularProgress
-                                        size={48}
+                                        size={24}
                                         thickness={4}
                                         sx={{ color: '#9c27b0' }}
                                     />

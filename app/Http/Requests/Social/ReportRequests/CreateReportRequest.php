@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests\Social\Report;
+namespace App\Http\Requests\Social\ReportRequests;
 
 use App\Enums\ReportReason;
 use Illuminate\Foundation\Http\FormRequest;

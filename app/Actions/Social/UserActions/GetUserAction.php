@@ -9,10 +9,10 @@ use Illuminate\Support\Facades\Auth;
 class GetUserAction
 {
     /**
-     * Отримує дані користувача залежно від рівня доступу.
+     * Отримує дані користувача.
      *
-     * Цей метод перевіряє рівень доступу до даних користувача та повертає або повну,
-     * або обмежену інформацію залежно від того, чи є запитуваний користувач власником.
+     * Цей метод отримує дані користувача за ідентифікатором і повертає єдиний набір даних,
+     * який є безпечним для всіх користувачів, незалежно від рівня доступу.
      *
      * @param string $identifier Ідентифікатор користувача (ID або username)
      * @return array Масив з даними користувача
@@ -21,16 +21,13 @@ class GetUserAction
     public function __invoke(string $identifier): array
     {
         try {
-            $authUser = Auth::user();
             $user = $this->findUserByIdentifier($identifier);
 
             if (!$user) {
                 throw new Exception('Користувача не знайдено.');
             }
 
-            return $this->isOwner($authUser, $user)
-                ? $this->getFullUserData($user)
-                : $this->getPublicUserData($user);
+            return $this->getUserData($user);
         } catch (Exception $e) {
             throw new Exception('Помилка під час отримання користувача: ' . $e->getMessage());
         }
@@ -50,53 +47,17 @@ class GetUserAction
     }
 
     /**
-     * Перевіряє, чи є поточний користувач власником профілю.
-     *
-     * @param User|null $authUser Авторизований користувач
-     * @param User $user Користувач, чий профіль запитують
-     * @return bool Повертає true, якщо користувач є власником
-     */
-    private function isOwner(?User $authUser, User $user): bool
-    {
-        return $authUser && $authUser->id === $user->id;
-    }
-
-    /**
-     * Повертає повну інформацію про користувача (для власника).
+     * Повертає дані користувача.
      *
      * @param User $user Користувач, чию інформацію потрібно повернути
-     * @return array Масив з повною інформацією про користувача
+     * @return array Масив з даними користувача, безпечними для всіх
      */
-    private function getFullUserData(User $user): array
+    private function getUserData(User $user): array
     {
         return collect($user->toArray())->except([
             'password',
             'google_id',
             'github_id',
         ])->toArray();
-    }
-
-
-    /**
-     * Повертає обмежену інформацію про користувача (для інших користувачів).
-     *
-     * @param User $user Користувач, чию інформацію потрібно повернути
-     * @return array Масив з обмеженою інформацією про користувача
-     */
-    private function getPublicUserData(User $user): array
-    {
-        return [
-            'id' => $user->id,
-            'username' => $user->username,
-            'first_name' => $user->first_name,
-            'last_name' => $user->last_name,
-            'role' => $user->role,
-            'avatar' => $user->avatar,
-            'gender' => $user->gender,
-            'biography' => $user->biography,
-            'country' => $user->country,
-            'is_online' => $user->is_online,
-            'last_seen_at' => $user->last_seen_at,
-        ];
     }
 }

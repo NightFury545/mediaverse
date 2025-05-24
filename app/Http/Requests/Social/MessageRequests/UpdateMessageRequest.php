@@ -3,9 +3,10 @@
 namespace App\Http\Requests\Social\MessageRequests;
 
 use App\Enums\FileExtension;
+use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class UpdateMessageRequest
+class UpdateMessageRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -15,8 +16,8 @@ class UpdateMessageRequest
     public function rules(): array
     {
         return [
-            'content' => 'nullable|string|max:360|required_without:attachments',
-            'attachments' => 'nullable|array|required_without:content',
+            'content' => 'nullable|string|max:360',
+            'attachments' => 'nullable|array',
             'attachments.*' => ['file', Rule::in(FileExtension::getAllExtensions()), 'max:20480'],
             'is_read' => 'nullable|boolean',
         ];

@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Social;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Social\Report\CreateReportRequest;
+use App\Http\Requests\Social\ReportRequests\CreateReportRequest;
 use App\Models\Report;
 use App\Services\Social\ReportService;
 use Exception;

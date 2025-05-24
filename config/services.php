@@ -50,4 +50,9 @@ return [
         'api_key' => env('TMDB_API_KEY'),
         'api_url' => env('TMDB_API_URL', 'https://api.themoviedb.org/3'),
     ],
+
+    'sightengine' => [
+        'user' => env('SIGHTENGINE_USER'),
+        'secret' => env('SIGHTENGINE_SECRET'),
+    ],
 ];

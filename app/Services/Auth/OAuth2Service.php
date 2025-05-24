@@ -2,6 +2,7 @@
 
 namespace App\Services\Auth;
 
+use App\Events\Social\User\UserRegisteredEvent;
 use App\Models\User;
 use Carbon\Carbon;
 use Exception;
@@ -112,6 +113,8 @@ class OAuth2Service
                 ]);
 
                 $user->markEmailAsVerified();
+
+                event(new UserRegisteredEvent($user));
             }
         }
 

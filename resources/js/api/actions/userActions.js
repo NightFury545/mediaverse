@@ -9,7 +9,7 @@ const getUsers = (query = null) => {
     return window.axios.get(userUrls.index)
 };
 const getUser = (identifier) => window.axios.get(userUrls.show(identifier));
-const updateUser = (userId, payload) => window.axios.put(userUrls.update(userId), payload);
+const updateUser = (userId, payload) => window.axios.post(userUrls.update(userId), payload);
 const deleteUser = (userId) => window.axios.delete(userUrls.delete(userId));
 const getMe = () => window.axios.get(userUrls.me);
 const getTopUsers = () => window.axios.get(userUrls.top);

@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Social;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Social\UserBlock\CreateUserBlockRequest;
+use App\Http\Requests\Social\UserBlockRequests\CreateUserBlockRequest;
 use App\Models\UserBlock;
 use App\Services\Social\UserBlockService;
 use Exception;

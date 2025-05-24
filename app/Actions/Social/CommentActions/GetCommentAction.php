@@ -24,16 +24,39 @@ class GetCommentAction
     public function __invoke(string $commentId): ?Comment
     {
         try {
+            $userId = Auth::id();
+
             $comment = Comment::with([
+                'user:id,username,first_name,last_name,avatar',
                 'replies.user:id,username,first_name,last_name,avatar,is_online',
-                'commentable'
-            ])->find($commentId);
+                'replies.likes' => function ($query) use ($userId) {
+                    if ($userId) {
+                        $query->where('user_id', $userId);
+                    }
+                },
+                'commentable',
+                'likes' => function ($query) use ($userId) {
+                    if ($userId) {
+                        $query->where('user_id', $userId);
+                    }
+                },
+            ])->withCount('replies')->find($commentId);
 
             if (!$comment) {
                 return null;
             }
 
             $this->checkVisibility($comment);
+
+            $comment->user_liked = $userId && $comment->likes->isNotEmpty();
+            $comment->like_id = $userId && $comment->likes->isNotEmpty() ? $comment->likes->first()->id : null;
+            $comment->unsetRelation('likes');
+
+            foreach ($comment->replies as $reply) {
+                $reply->user_liked = $userId && $reply->likes->isNotEmpty();
+                $reply->like_id = $userId && $reply->likes->isNotEmpty() ? $reply->likes->first()->id : null;
+                $reply->unsetRelation('likes');
+            }
 
             return $comment;
         } catch (Exception $e) {

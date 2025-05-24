@@ -4,6 +4,17 @@ import { motion } from 'framer-motion';
 import { Public, Cake, Wc, AccessTime, CalendarToday, Info } from '@mui/icons-material';
 import { formatDate } from '@/utils/formatDate';
 
+const months = [
+    'січня', 'лютого', 'березня', 'квітня', 'травня', 'червня',
+    'липня', 'серпня', 'вересня', 'жовтня', 'листопада', 'грудня'
+];
+const displayDate = (isoDate) => {
+    if (!isoDate) return '';
+    const datePart = isoDate.split('T')[0];
+    const [year, month, day] = datePart.split('-');
+    return `${parseInt(day)} ${months[parseInt(month) - 1]} ${year}`;
+};
+
 const ProfileInfo = ({ profileUser, isMobile }) => (
     <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -35,7 +46,7 @@ const ProfileInfo = ({ profileUser, isMobile }) => (
                 {profileUser.biography && (
                     <Box sx={{ mb: 2, p: 2, border: '1px solid rgba(156, 39, 176, 0.2)', borderRadius: 1 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                            <Info sx={{ color: '#9c27b0', fontSize: '1.2rem' }} />
+                            <Info sx={{ color: '#9c27b0', fontSize: '1.2rem', alignSelf: 'flex-start' }} />
                             <Typography variant="body2" sx={{ color: '#b0b0b0', mb: 1 }}>
                                 Біографія
                             </Typography>
@@ -62,7 +73,7 @@ const ProfileInfo = ({ profileUser, isMobile }) => (
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <Cake sx={{ color: '#9c27b0', fontSize: '1.2rem' }} />
                             <Typography variant="body2" sx={{ color: '#e0e0e0' }}>
-                                День народження: {formatDate(profileUser.birthday)}
+                                День народження: {displayDate(profileUser.birthday)}
                             </Typography>
                         </Box>
                     )}
@@ -85,7 +96,7 @@ const ProfileInfo = ({ profileUser, isMobile }) => (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <CalendarToday sx={{ color: '#9c27b0', fontSize: '1.2rem' }} />
                         <Typography variant="body2" sx={{ color: '#e0e0e0' }}>
-                            Зареєстрований: {formatDate(profileUser.created_at)}
+                            Зареєстрований: {displayDate(profileUser.created_at)}
                         </Typography>
                     </Box>
                 </Box>

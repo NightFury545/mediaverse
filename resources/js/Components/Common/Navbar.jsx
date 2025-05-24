@@ -190,7 +190,7 @@ const Navbar = () => {
         "Головна": <HomeIcon fontSize="small" sx={{ fontSize: "20px" }} />,
         "Мережа": <NetworkIcon fontSize="small" sx={{ fontSize: "20px" }} />,
         "Фільми": <MovieIcon fontSize="small" sx={{ fontSize: "20px" }} />,
-        "Форум": <ForumIcon fontSize="small" sx={{ fontSize: "20px" }} />,
+        "FAQ": <ForumIcon fontSize="small" sx={{ fontSize: "20px" }} />,
         "Чати": <ChatIcon fontSize="small" sx={{ fontSize: "20px" }} />,
         "Пости": <PostIcon fontSize="small" sx={{ fontSize: "20px" }} />,
         "Користувачі": <People fontSize="small" sx={{ fontSize: "20px" }} />,
@@ -203,7 +203,7 @@ const Navbar = () => {
         "Головна": [],
         "Мережа": ["Чати", "Пости", "Користувачі"],
         "Фільми": ["Новинки", "Популярне", "Жанри"],
-        "Форум": []
+        "FAQ": []
     };
 
     const dropdownMenu = (menuName, items) => (

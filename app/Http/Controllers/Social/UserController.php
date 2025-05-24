@@ -82,12 +82,12 @@ class UserController extends Controller
             $updatedUser = $this->userService->update($user, $request->validated());
 
             return response()->json([
-                'message' => 'User updated successfully.',
+                'message' => 'Профіль успішно оновлено!',
                 'data' => $updatedUser,
             ]);
         } catch (Exception $e) {
             return response()->json([
-                'error' => 'Failed to update user: ' . $e->getMessage(),
+                'error' => $e->getMessage(),
             ], 500);
         }
     }

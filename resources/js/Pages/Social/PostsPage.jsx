@@ -23,11 +23,10 @@ import {
     PostAdd,
     SentimentDissatisfied,
 } from '@mui/icons-material';
-import { Link } from 'react-router-dom';
+import {Link} from 'react-router-dom';
 import PostCard from '@/Components/Social/PostCard.jsx';
 import PostsFilter from '@/Components/Social/PostsFilter.jsx';
-import { likeActions, postActions } from '@/api/actions';
-import { useAuth } from '@/Components/Auth/AuthProvider.jsx';
+import { postActions } from '@/api/actions';
 import InlinePostCard from '@/Components/Social/InlinePostCard.jsx';
 
 const fetchPosts = async ({ pageParam = null, query = '' }) => {
@@ -65,7 +64,7 @@ const fetchPosts = async ({ pageParam = null, query = '' }) => {
 };
 
 const fetchTopPosts = async () => {
-    const response = await postActions.getPosts('sort=-comments_count&perPage=10');
+    const response = await postActions.getPosts('sort=-comments_count&perPage=10&filter[visibility]=public');
     return {
         posts: response.data.data.map((post) => ({
             id: post.id,
@@ -105,7 +104,7 @@ const EmptyPostsPlaceholder = () => (
                 variant="body1"
                 sx={{ color: '#b0b0b0', mb: 3, maxWidth: '400px', margin: '0 auto' }}
             >
-                It looks quiet here. Be the first to share something with the community!
+                Тут виглядає тихо. Будьте першим, хто поділиться чимось із спільнотою!
             </Typography>
             <Button
                 variant="contained"
@@ -121,7 +120,7 @@ const EmptyPostsPlaceholder = () => (
                     },
                 }}
             >
-                Create First Post
+                Створити перший пост
             </Button>
         </Paper>
     </motion.div>
@@ -166,8 +165,6 @@ const PostsPage = () => {
     const [showFilters, setShowFilters] = useState(false);
     const observer = useRef();
     const loadingRef = useRef(false);
-    const { isAuthenticated } = useAuth();
-    const { user } = useAuth();
 
     const {
         data,
@@ -225,6 +222,7 @@ const PostsPage = () => {
 
     const handleApplyFilters = (queryString) => {
         setQuery(queryString || 'sort=-created_at');
+        scrollToTop();
     };
 
     useEffect(() => {
@@ -289,7 +287,7 @@ const PostsPage = () => {
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                     <Whatshot sx={{ mr: 1, color: '#ff4081' }} />
                     <Typography variant="h6" sx={{ color: '#ffffff' }}>
-                        Top Posts
+                        Топ пости
                     </Typography>
                 </Box>
                 <Divider sx={{ bgcolor: 'rgba(255, 255, 255, 0.12)', mb: 2 }} />

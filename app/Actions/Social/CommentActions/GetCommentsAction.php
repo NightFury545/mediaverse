@@ -28,13 +28,30 @@ class GetCommentsAction
         try {
             $this->checkVisibility($commentable);
 
-            return $this->applyPagination(
+            $userId = Auth::id();
+
+            $comments = $this->applyPagination(
                 $this->applySorting(
-                    $this->applyFilters($commentable->comments()->with(['user:id,username,first_name,last_name,avatar'])->withCount('replies')
+                    $this->applyFilters(
+                        $commentable->comments()->with([
+                            'user:id,username,first_name,last_name,avatar',
+                            'likes' => function ($query) use ($userId) {
+                                if ($userId) {
+                                    $query->where('user_id', $userId);
+                                }
+                            }
+                        ])->withCount('replies')
                     )
                 ),
                 $perPage
             );
+
+            foreach ($comments as $comment) {
+                $comment->user_liked = $userId && $comment->likes->isNotEmpty();
+                $comment->like_id = $userId && $comment->likes->isNotEmpty() ? $comment->likes->first()->id : null;
+                $comment->unsetRelation('likes');
+            }
+            return $comments;
         } catch (Exception $e) {
             throw new Exception('Помилка під час отримання коментарів: ' . $e->getMessage());
         }

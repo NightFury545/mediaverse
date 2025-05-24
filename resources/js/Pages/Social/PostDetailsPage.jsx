@@ -120,7 +120,6 @@ const PostDetailsPage = () => {
     const isLargeScreen = useMediaQuery(theme.breakpoints.up('lg'));
     const isMediumScreen = useMediaQuery(theme.breakpoints.between('md', 'lg'));
     const { identifier } = useParams();
-    const { isAuthenticated, user } = useAuth();
 
     const {
         data: post,

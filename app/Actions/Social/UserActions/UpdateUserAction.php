@@ -4,7 +4,9 @@ namespace App\Actions\Social\UserActions;
 
 use App\Models\User;
 use Exception;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use App\Facades\Files\FileFacade;
 
 class UpdateUserAction
 {
@@ -24,6 +26,16 @@ class UpdateUserAction
         DB::beginTransaction();
 
         try {
+            if (isset($data['avatar']) && $data['avatar'] instanceof UploadedFile) {
+                if ($user->avatar) {
+                    FileFacade::deleteFile($user->avatar);
+                }
+                $avatarPath = FileFacade::saveFile($data['avatar'], 'avatars');
+                $data['avatar'] = '/storage/' . $avatarPath;
+            } else {
+                $data['avatar'] = $user->avatar;
+            }
+
             $this->updateUser($user, $data);
 
             DB::commit();
@@ -68,6 +80,7 @@ class UpdateUserAction
             'avatar' => $data['avatar'] ?? $user->avatar,
             'gender' => $data['gender'] ?? $user->gender,
             'biography' => $data['biography'] ?? $user->biography,
+            'birthday' => $data['birthday'] ?? $user->birthday,
             'country' => $data['country'] ?? $user->country,
             'is_online' => $data['is_online'] ?? $user->is_online,
             'last_seen_at' => $data['last_seen_at'] ?? $user->last_seen_at,

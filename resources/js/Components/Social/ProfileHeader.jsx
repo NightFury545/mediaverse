@@ -1,8 +1,8 @@
 import React from 'react';
-import { Box, Typography, Avatar, Button, IconButton, Tooltip, Chip } from '@mui/material';
+import { Box, Typography, Avatar, Button, IconButton, Tooltip, Chip, CircularProgress } from '@mui/material';
 import { Settings, Chat, GroupAdd, GroupRemove, Cancel, CheckCircle, Email, VerifiedUser, Shield, Person } from '@mui/icons-material';
 
-const ProfileHeader = ({ profileUser, isOwner, isAuthenticated, friendStatus, handleMessage, handleFriendAction, handleRejectFriendRequest, handleEditOpen, isMobile, isOnline, formatLastSeen }) => (
+const ProfileHeader = ({ profileUser, isOwner, isAuthenticated, friendStatus, handleMessage, handleFriendAction, handleRejectFriendRequest, handleEditOpen, isMobile, isOnline, formatLastSeen, isCreatingChat }) => (
     <Box
         sx={{
             display: 'flex',
@@ -92,7 +92,7 @@ const ProfileHeader = ({ profileUser, isOwner, isAuthenticated, friendStatus, ha
                                 <Person sx={{ color: '#fff', fontSize: '0.8rem' }} />
                             )
                         }
-                        label={profileUser.role.charAt(0).toUpperCase() + profileUser.role.slice(1)}
+                        label={profileUser.role === 'admin' ? 'Адмін' : profileUser.role === 'moderator' ? 'Модератор' : 'Користувач'}
                         size="small"
                         sx={{
                             bgcolor: profileUser.role === 'admin' ? '#d32f2f' : profileUser.role === 'moderator' ? '#1976d2' : '#4caf50',
@@ -113,13 +113,16 @@ const ProfileHeader = ({ profileUser, isOwner, isAuthenticated, friendStatus, ha
             <Box sx={{ display: 'flex', gap: { xs: 1, sm: 2 }, flexWrap: 'wrap', justifyContent: { xs: 'center', md: 'flex-start' } }}>
                 <Button
                     variant="contained"
-                    startIcon={<Chat />}
+                    startIcon={isCreatingChat ? <CircularProgress size={20} sx={{ color: '#ffffff' }} /> : <Chat />}
                     onClick={handleMessage}
+                    disabled={isCreatingChat}
                     sx={{
                         bgcolor: '#9c27b0',
                         '&:hover': { bgcolor: '#7b1fa2', boxShadow: '0 0 10px rgba(156, 39, 176, 0.5)' },
+                        '&:disabled': { bgcolor: '#4a1a5e', color: '#a0a0a0' },
                         fontSize: { xs: '0.75rem', sm: '0.875rem' },
                         transition: 'all 0.3s',
+                        minWidth: { xs: '100px', sm: '120px' },
                     }}
                 >
                     Написати

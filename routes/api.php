@@ -19,3 +19,6 @@ require base_path('routes/api/social/user-status.php');
 require base_path('routes/api/social/like.php');
 require base_path('routes/api/social/notification.php');
 require base_path('routes/api/social/setting.php');
+
+// files
+require base_path('routes/api/files/private-files.php');

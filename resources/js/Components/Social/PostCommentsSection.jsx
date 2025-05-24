@@ -195,7 +195,6 @@ const PostCommentsSection = ({ post }) => {
     const createCommentMutation = useMutation(
         (payload) =>
             commentActions.createComment('posts', post.id, payload).then((response) => {
-                console.log('API response:', response);
                 return response.data.data || response.data.comment;
             }),
         {
@@ -222,10 +221,7 @@ const PostCommentsSection = ({ post }) => {
                         like_id: newComment.like_id || null,
                     };
 
-                    console.log('Old data:', oldData, 'Pages length:', oldData?.pages?.length);
-
                     if (!oldData || !oldData.pages || !Array.isArray(oldData.pages) || oldData.pages.length === 0) {
-                        console.log('No previous data, creating new page with comment');
                         return {
                             pages: [{ comments: [formattedComment], totalComments: 1, nextPageUrl: null, hasMore: false }],
                             pageParams: [null],
@@ -242,8 +238,6 @@ const PostCommentsSection = ({ post }) => {
                         ...oldData.pages.slice(1),
                     ];
 
-                    console.log('Updated cache:', { pages: newPages, pageParams: oldData.pageParams });
-
                     return {
                         pages: newPages,
                         pageParams: oldData.pageParams || [null],
@@ -256,7 +250,6 @@ const PostCommentsSection = ({ post }) => {
                 setIsCommentModalOpen(false);
             },
             onError: (error) => {
-                console.error('Mutation error:', error);
                 alert(`Помилка створення коментаря: ${error.message || 'Щось пішло не так'}`);
             },
         }

@@ -44,7 +44,7 @@ const HomePage = () => {
             media: {
                 type: "film",
                 title: "Дюна",
-                image: "",
+                image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR2n-cDECXOHcePs8Ldh_uyWY7GwqUQ_QJE6SnUfl6SWa7zgj8Qqp73meUVxpqy_PDJTy4&usqp=CAU",
                 rating: 4.8
             },
             likes: 124,
@@ -62,7 +62,7 @@ const HomePage = () => {
             media: {
                 type: "playlist",
                 title: "Фокус та продуктивність",
-                image: "",
+                image: "https://lkmp.app/images/screen/bg4.jpg",
                 tracks: 24
             },
             likes: 89,
@@ -345,15 +345,6 @@ const HomePage = () => {
                                             backdropFilter: "blur(10px)"
                                         }}
                                     >
-                                        <img
-                                            src=""
-                                            alt="Social Preview"
-                                            style={{
-                                                width: "100%",
-                                                display: "block",
-                                                filter: "brightness(0.9) contrast(1.1)"
-                                            }}
-                                        />
                                         <Box sx={{ p: 4 }}>
                                             <Typography variant="h6" sx={{ color: "#ffffff", mb: 1, fontWeight: "bold" }}>
                                                 Останні події у спільноті

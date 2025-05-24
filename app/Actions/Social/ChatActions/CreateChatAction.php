@@ -25,6 +25,12 @@ class CreateChatAction
         DB::beginTransaction();
 
         try {
+            $existingChat = $this->findExistingChat($data);
+            if ($existingChat) {
+                DB::commit();
+                return $existingChat;
+            }
+
             $this->ensureConditionsMet($data);
 
             $chat = $this->createChat($data);
@@ -48,31 +54,26 @@ class CreateChatAction
      */
     private function ensureConditionsMet(array $data): void
     {
-        $this->validateChatDoesNotExist($data);
         $this->validateUsersAreDifferent($data);
         $this->validateNotBlockedUsers($data);
         $this->validateMessagePrivacy($data);
     }
 
     /**
-     * Перевіряє, чи вже існує чат між цими користувачами.
+     * Шукає існуючий чат між цими користувачами.
      *
      * @param array $data Дані чату, що включають ID другого користувача
-     * @throws Exception Викидається, якщо чат між користувачами вже існує
+     * @return Chat|null Існуючий чат або null, якщо чат не існує
      */
-    private function validateChatDoesNotExist(array $data): void
+    private function findExistingChat(array $data): ?Chat
     {
-        $exists = Chat::where(function ($query) use ($data) {
+        return Chat::where(function ($query) use ($data) {
             $query->where('user_one_id', Auth::id())
                 ->where('user_two_id', $data['user_two_id']);
         })->orWhere(function ($query) use ($data) {
             $query->where('user_one_id', $data['user_two_id'])
                 ->where('user_two_id', Auth::id());
-        })->exists();
-
-        if ($exists) {
-            throw new Exception('Чат між цими користувачами вже існує.');
-        }
+        })->first();
     }
 
     /**

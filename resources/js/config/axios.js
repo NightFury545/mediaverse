@@ -22,6 +22,7 @@ axiosInstance.interceptors.request.use(
             config.headers['Authorization'] = `Bearer ${token}`;
         }
         config.headers['Accept'] = 'application/json';
+        config.headers['Accept-Language'] = 'uk;'
         return config;
     },
     (error) => Promise.reject(error)

@@ -222,6 +222,7 @@ const UserCard = ({ user, sx, onClick }) => {
                     {user.biography ? (
                         <Typography
                             variant="body2"
+                            dangerouslySetInnerHTML={{ __html: user.biography }}
                             sx={{
                                 color: '#e0e0e0',
                                 fontStyle: 'italic',
@@ -232,9 +233,13 @@ const UserCard = ({ user, sx, onClick }) => {
                                 WebkitBoxOrient: 'vertical',
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
+                                '& p': {
+                                    marginBottom: 0,
+                                    marginTop: 0,
+                                }
                             }}
                         >
-                            {user.biography}
+
                         </Typography>
                     ) : (
                         <Typography

@@ -41,12 +41,12 @@ class PostController extends Controller
             $post = $this->postService->create($request->validated());
 
             return response()->json([
-                'message' => 'Post created successfully.',
+                'message' => 'Пост успішно створено.',
                 'data' => $post,
             ], 201);
         } catch (Exception $e) {
             return response()->json([
-                'error' => 'Failed to create post: ' . $e->getMessage(),
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -64,7 +64,7 @@ class PostController extends Controller
 
             if (!$post) {
                 return response()->json([
-                    'error' => 'Post not found.',
+                    'error' => 'Пост не знайдено.',
                 ], 404);
             }
 
@@ -73,7 +73,7 @@ class PostController extends Controller
             ]);
         } catch (Exception $e) {
             return response()->json([
-                'error' => 'Failed to retrieve post: ' . $e->getMessage(),
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -94,12 +94,12 @@ class PostController extends Controller
             $updatedPost = $this->postService->update($post, $request->validated());
 
             return response()->json([
-                'message' => 'Post updated successfully.',
+                'message' => 'Пост успішно оновлено.',
                 'data' => $updatedPost,
             ]);
         } catch (Exception $e) {
             return response()->json([
-                'error' => 'Failed to update post: ' . $e->getMessage(),
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -119,11 +119,11 @@ class PostController extends Controller
             $this->postService->delete($post);
 
             return response()->json([
-                'message' => 'Post deleted successfully.',
+                'message' => 'Пост успішно видалено.',
             ]);
         } catch (Exception $e) {
             return response()->json([
-                'error' => 'Failed to delete post: ' . $e->getMessage(),
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -144,7 +144,7 @@ class PostController extends Controller
             return response()->json($posts);
         } catch (Exception $e) {
             return response()->json([
-                'error' => 'Failed to fetch posts: ' . $e->getMessage(),
+                'error' => $e->getMessage(),
             ], 500);
         }
     }

@@ -190,7 +190,7 @@ const PostCreatePage = () => {
         comments_count: 0,
         views_count: 0,
         created_at: new Date().toISOString(),
-        slug: 'preview',
+        slug: 'Попередній перегляд',
         tags: selectedTags,
         visibility,
         comments_enabled: commentsEnabled,
@@ -406,6 +406,7 @@ const PostCreatePage = () => {
                                                 '&.Mui-focused': {
                                                     border: '1px solid #ff4081',
                                                     borderRadius: 4,
+                                                    '&:hover': {borderColor: 'rgba(0, 0, 0, 0)'},
                                                     boxShadow: '0 0 10px rgba(255, 64, 129, 0.3)',
                                                     outline: 'none',
                                                 },

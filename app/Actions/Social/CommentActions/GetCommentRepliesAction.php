@@ -26,14 +26,31 @@ class GetCommentRepliesAction
     {
         $this->checkVisibility($comment);
 
-        return $this->applyPagination(
+        $userId = Auth::id();
+
+        $replies = $this->applyPagination(
             $this->applySorting(
                 $this->applyFilters(
-                    $comment->replies()->with(['user:id,username,first_name,last_name,avatar'])->withCount('replies')
+                    $comment->replies()->with([
+                        'user:id,username,first_name,last_name,avatar',
+                        'likes' => function ($query) use ($userId) {
+                            if ($userId) {
+                                $query->where('user_id', $userId);
+                            }
+                        }
+                    ])->withCount('replies')
                 )
             ),
             $perPage
         );
+
+        foreach ($replies as $reply) {
+            $reply->user_liked = $userId && $reply->likes->isNotEmpty();
+            $reply->like_id = $userId && $reply->likes->isNotEmpty() ? $reply->likes->first()->id : null;
+            $reply->unsetRelation('likes');
+        }
+
+        return $replies;
     }
 
     private function applyFilters($query): QueryBuilder

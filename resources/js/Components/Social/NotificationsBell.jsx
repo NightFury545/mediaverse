@@ -21,8 +21,9 @@ const NotificationsBell = () => {
             notifications: response.data.data,
             nextPageUrl: response.data.next_page_url,
         }),
-        enabled: !!userId,
+        enabled: !!userId && !!user.email_verified_at,
         refetchOnWindowFocus: false,
+        retry: false,
     });
 
     useEffect(() => {

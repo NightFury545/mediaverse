@@ -4,7 +4,7 @@ use App\Http\Controllers\Social\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('users')->middleware(['auth', 'verified'])->group(function () {
-    Route::put('/{user}', [UserController::class, 'update'])->name('users.update');
+    Route::post('/{user}', [UserController::class, 'update'])->name('users.update');
     Route::delete('/{user}', [UserController::class, 'delete'])->name('users.delete');
 });
 

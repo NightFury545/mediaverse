@@ -6,12 +6,17 @@ use App\Actions\Traits\ProcessesAttachments;
 use App\Enums\PostVisibility;
 use App\Models\Post;
 use App\Models\Tag;
+use App\Services\Social\ContentModerationService;
 use Exception;
 use Illuminate\Support\Facades\DB;
 
 class CreatePostAction
 {
     use ProcessesAttachments;
+
+    public function __construct(protected ContentModerationService $moderator)
+    {
+    }
 
     /**
      * Створює новий пост із зазначеними даними.
@@ -28,6 +33,15 @@ class CreatePostAction
 
         try {
             $data['visibility'] = PostVisibility::from($data['visibility']);
+
+            $this->moderator->moderateText($data['title'] ?? '');
+            $this->moderator->moderateText($data['content'] ?? '');
+
+            $attachments = $data['attachments'] ?? [];
+            foreach ($attachments as $attachment) {
+                $this->moderator->moderateImage($attachment);
+            }
+
             $data['attachments'] = $this->processAttachments($data['attachments'] ?? [], $data['visibility']->value);
 
             $post = Post::create($this->prepareCreatePostData($data));
@@ -41,7 +55,9 @@ class CreatePostAction
             return $post;
         } catch (Exception $e) {
             DB::rollBack();
-            throw new Exception('Помилка під час створення поста. Можлива проблема з базою даних або файлами.' . $e->getMessage());
+            throw new Exception(
+                'Помилка під час створення поста. ' . $e->getMessage()
+            );
         }
     }
 

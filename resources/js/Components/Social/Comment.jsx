@@ -36,6 +36,7 @@ import { commentActions } from '@/api/actions';
 import { likeActions } from '@/api/actions';
 import { useAuth } from '@/Components/Auth/AuthProvider.jsx';
 import { formatDate } from '@/utils/formatDate';
+import {toast} from "react-toastify";
 
 const quillModules = {
     toolbar: [
@@ -105,14 +106,14 @@ const TreeLines = memo(({ depth, isLast, isRepliesOpen, repliesCount, isMobile }
     );
 });
 
-const Comment = ({ comment, postSlug, depth = 0, maxDepth = 3, isLast = false }) => {
+const Comment = ({ comment, postSlug, depth = 0, maxDepth = 3, isLast = false, isRepliesOpen: initialRepliesOpen = false }) => {
     const { isAuthenticated, user } = useAuth();
     const navigate = useNavigate();
     const queryClient = useQueryClient();
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
-    const [isRepliesOpen, setIsRepliesOpen] = useState(false);
+    const [isRepliesOpen, setIsRepliesOpen] = useState(initialRepliesOpen);
     const [isReplyModalOpen, setIsReplyModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [newReply, setNewReply] = useState('');
@@ -147,24 +148,131 @@ const Comment = ({ comment, postSlug, depth = 0, maxDepth = 3, isLast = false })
     );
 
     const likeMutation = useMutation(() => likeActions.createLike('comments', comment.id), {
-        onSuccess: () => {
-            queryClient.invalidateQueries(['post', postSlug]);
-            queryClient.invalidateQueries(['comments', comment.id]);
-            queryClient.invalidateQueries(['comments', comment.commentable_id]);
+        onMutate: async () => {
+            await queryClient.cancelQueries(['comments', comment.commentable_id]);
+            await queryClient.cancelQueries(['comments', comment.id, 'replies']);
+
+            const previousCommentData = queryClient.getQueryData(['comments', comment.commentable_id]);
+            const previousRepliesData = queryClient.getQueryData(['comments', comment.parent_id, 'replies']);
+
+            queryClient.setQueryData(['comments', comment.commentable_id], (oldData) => {
+                if (!oldData || !oldData.pages || !Array.isArray(oldData.pages)) {
+                    return oldData;
+                }
+                return {
+                    ...oldData,
+                    pages: oldData.pages.map((page) => ({
+                        ...page,
+                        comments: page.comments.map((c) =>
+                            c.id === comment.id
+                                ? {
+                                    ...c,
+                                    user_liked: true,
+                                    like_id: `temp-${comment.id}`,
+                                    likes_count: (c.likes_count || 0) + 1,
+                                }
+                                : c
+                        ),
+                    })),
+                };
+            });
+            if (comment.parent_id) {
+                queryClient.setQueryData(['comments', comment.parent_id, 'replies'], (oldReplies) => {
+                    if (!oldReplies || !Array.isArray(oldReplies)) {
+                        return oldReplies;
+                    }
+                    return oldReplies.map((c) =>
+                        c.id === comment.id
+                            ? {
+                                ...c,
+                                user_liked: true,
+                                like_id: `temp-${comment.id}`,
+                                likes_count: (c.likes_count || 0) + 1,
+                            }
+                            : c
+                    );
+                });
+            }
+
+            return { previousCommentData, previousRepliesData };
         },
-        onError: (error) => {
-            alert(`Помилка лайка: ${error.response?.data?.message || 'Щось пішло не так'}`);
+        onError: (err, variables, context) => {
+            queryClient.setQueryData(['comments', comment.commentable_id], context.previousCommentData);
+            queryClient.setQueryData(['comments', comment.parent_id, 'replies'], context.previousRepliesData);
+            toast.error(`Помилка лайка: ${err.response?.data?.message || 'Щось пішло не так'}`);
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries(['post', postSlug]);
+            queryClient.invalidateQueries(['comments', comment.commentable_id]);
+            queryClient.invalidateQueries(['comments', comment.id, 'replies']);
+            if (comment.parent_id) {
+                queryClient.invalidateQueries(['comments', comment.parent_id, 'replies']);
+            }
         },
     });
 
     const unlikeMutation = useMutation((likeId) => likeActions.deleteLike(likeId), {
-        onSuccess: () => {
-            queryClient.invalidateQueries(['post', postSlug]);
-            queryClient.invalidateQueries(['comments', comment.id]);
-            queryClient.invalidateQueries(['comments', comment.commentable_id]);
+        onMutate: async () => {
+            await queryClient.cancelQueries(['comments', comment.commentable_id]);
+            await queryClient.cancelQueries(['comments', comment.id, 'replies']);
+
+            const previousCommentData = queryClient.getQueryData(['comments', comment.commentable_id]);
+            const previousRepliesData = queryClient.getQueryData(['comments', comment.parent_id, 'replies']);
+
+            queryClient.setQueryData(['comments', comment.commentable_id], (oldData) => {
+                if (!oldData || !oldData.pages || !Array.isArray(oldData.pages)) {
+                    return oldData;
+                }
+                return {
+                    ...oldData,
+                    pages: oldData.pages.map((page) => ({
+                        ...page,
+                        comments: page.comments.map((c) =>
+                            c.id === comment.id
+                                ? {
+                                    ...c,
+                                    user_liked: false,
+                                    like_id: null,
+                                    likes_count: (c.likes_count || 0) - 1,
+                                }
+                                : c
+                        ),
+                    })),
+                };
+            });
+
+            if (comment.parent_id) {
+                queryClient.setQueryData(['comments', comment.parent_id, 'replies'], (oldReplies) => {
+                    if (!oldReplies || !Array.isArray(oldReplies)) {
+                        return oldReplies;
+                    }
+                    return oldReplies.map((c) =>
+                        c.id === comment.id
+                            ? {
+                                ...c,
+                                user_liked: false,
+                                like_id: null,
+                                likes_count: (c.likes_count || 0) - 1,
+                            }
+                            : c
+                    );
+                });
+            }
+
+            return { previousCommentData, previousRepliesData };
         },
-        onError: (error) => {
-            alert(`Помилка зняття лайка: ${error.response?.data?.message || 'Щось пішло не так'}`);
+        onError: (err, variables, context) => {
+            queryClient.setQueryData(['comments', comment.commentable_id], context.previousCommentData);
+            queryClient.setQueryData(['comments', comment.parent_id, 'replies'], context.previousRepliesData);
+            toast.error(`Помилка зняття лайка: ${err.response?.data?.message || 'Щось пішло не так'}`);
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries(['post', postSlug]);
+            queryClient.invalidateQueries(['comments', comment.commentable_id]);
+            queryClient.invalidateQueries(['comments', comment.id, 'replies']);
+            if (comment.parent_id) {
+                queryClient.invalidateQueries(['comments', comment.parent_id, 'replies']);
+            }
         },
     });
 
@@ -380,9 +488,9 @@ const Comment = ({ comment, postSlug, depth = 0, maxDepth = 3, isLast = false })
     const handleShare = () => {
         const url = `${window.location.origin}/posts/${postSlug}/comments/${comment.id}`;
         navigator.clipboard.writeText(url).then(() => {
-            alert('Посилання скопійовано!');
+            toast.success('Посилання скопійовано!');
         }).catch(() => {
-            alert('Помилка копіювання посилання');
+            toast.error('Помилка копіювання посилання');
         });
     };
 

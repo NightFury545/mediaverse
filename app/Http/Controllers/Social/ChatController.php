@@ -32,12 +32,12 @@ class ChatController extends Controller
             $chat = $this->chatService->create($request->validated());
 
             return response()->json([
-                'message' => 'Chat created successfully.',
+                'message' => 'Чат створено успішно.',
                 'data' => $chat,
             ], 201);
         } catch (Exception $e) {
             return response()->json([
-                'error' => 'Failed to create chat: ' . $e->getMessage(),
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -53,12 +53,12 @@ class ChatController extends Controller
             $updatedChat = $this->chatService->update($chat, $request->validated());
 
             return response()->json([
-                'message' => 'Chat updated successfully.',
+                'message' => 'Чат успішно оновлено.',
                 'data' => $updatedChat,
             ]);
         } catch (Exception $e) {
             return response()->json([
-                'error' => 'Failed to update chat: ' . $e->getMessage(),
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -78,7 +78,7 @@ class ChatController extends Controller
             ]);
         } catch (Exception $e) {
             return response()->json([
-                'error' => 'Failed to delete chat: ' . $e->getMessage(),
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -96,18 +96,13 @@ class ChatController extends Controller
             return response()->json($chat);
         } catch (Exception $e) {
             return response()->json([
-                'error' => 'Failed to retrieve chat: ' . $e->getMessage(),
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
 
-    /**
-     * @throws AuthorizationException
-     */
     public function index(Request $request): JsonResponse
     {
-        $this->authorize('viewAny', Chat::class);
-
         try {
             $perPage = $request->get('perPage', 20);
             $chats = $this->chatService->getChats($perPage);
@@ -115,12 +110,8 @@ class ChatController extends Controller
             return response()->json($chats);
         } catch (Exception $e) {
             return response()->json([
-                'error' => 'Failed to fetch chats: ' . $e->getMessage(),
+                'error' => $e->getMessage(),
             ], 500);
         }
-    }
-
-    private function authorize(string $string, string $class)
-    {
     }
 }

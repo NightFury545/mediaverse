@@ -141,11 +141,6 @@ const UserMenu = ({onSignInClick}) => {
                         <Typography variant="body2">Профіль</Typography>
                     </MenuItem>
 
-                    <MenuItem onClick={handleMenuClose}>
-                        <Star sx={{marginRight: 2, fontSize: "20px", color: "white"}}/>
-                        <Typography variant="body2">Преміум</Typography>
-                    </MenuItem>
-
                     <MenuItem onClick={handleSettingsOpen}>
                         <Settings sx={{marginRight: 2, fontSize: "20px", color: "white"}}/>
                         <Typography variant="body2">Налаштування</Typography>
