@@ -65,6 +65,7 @@ class ContentModerationService
      */
     public function moderateText(string $text): void
     {
+        if (!$text) return;
         $response = Http::asForm()->post('https://api.sightengine.com/1.0/text/check.json', [
             'text' => $text,
             'lang' => 'en,ru,fr,it,pt,es,tr',

@@ -25,8 +25,8 @@ class UpdatePostRequest extends FormRequest
         );
         $mimes = implode(',', $allowedExtensions);
         return [
-            'title' => 'required|string|max:36',
-            'content' => 'required|string|max:564',
+            'title' => 'nullable|string|min:3|max:36',
+            'content' => 'nullable|string|max:564',
             'tags' => 'nullable|array',
             'tags.*' => 'string|min:2|max:24',
             'attachments' => 'nullable|array',

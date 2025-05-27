@@ -160,7 +160,7 @@ const PostsPage = () => {
     const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'lg'));
     const isDesktop = useMediaQuery(theme.breakpoints.up('lg'));
     const isLargeScreen = useMediaQuery(theme.breakpoints.up('md'));
-    const [query, setQuery] = useState('sort=-created_at&perPage=3');
+    const [query, setQuery] = useState('sort=-created_at&perPage=10');
     const [showScrollTop, setShowScrollTop] = useState(false);
     const [showFilters, setShowFilters] = useState(false);
     const observer = useRef();

@@ -11,7 +11,7 @@ const getPosts = (query = null) => {
 };
 const getPost = (identifier) => window.axios.get(postUrls.show(identifier));
 const createPost = (payload) => window.axios.post(postUrls.store, payload);
-const updatePost = (postId, payload) => window.axios.put(postUrls.update(postId), payload);
+const updatePost = (postId, payload) => window.axios.post(postUrls.update(postId), payload);
 const deletePost = (postId) => window.axios.delete(postUrls.destroy(postId));
 
 export default {

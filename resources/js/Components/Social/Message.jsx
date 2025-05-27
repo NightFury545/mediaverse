@@ -145,7 +145,7 @@ const DateDivider = ({ date }) => (
                 fontWeight: 500,
             }}
         >
-            {new Date(date).toLocaleDateString('en-US', {
+            {new Date(date).toLocaleDateString('uk', {
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric',

@@ -32,6 +32,14 @@ class CreateCommentAction
         try {
             $this->ensureCanReceiveComments($commentable);
 
+            if (!isset($data['parent_id'])) {
+                $this->restrictOneTopLevelCommentPerUser($commentable);
+            }
+
+            if (isset($data['parent_id'])) {
+                $this->restrictSelfReply($data['parent_id']);
+            }
+
             $commentData = $this->prepareCommentData($data);
 
             $comment = $commentable->comments()->create($commentData);
@@ -50,6 +58,48 @@ class CreateCommentAction
             throw new Exception('Помилка під час створення коментаря: ' . $e->getMessage());
         }
     }
+
+    /**
+     * Перевіряє, чи користувач уже залишив топ-рівневий коментар під об'єктом.
+     * Топ-рівневий коментар — це коментар із parent_id = null.
+     *
+     * @param Movie|Post $commentable
+     * @throws Exception Якщо користувач уже залишив топ-рівневий коментар
+     */
+    private function restrictOneTopLevelCommentPerUser(Movie|Post $commentable): void
+    {
+        $userId = Auth::id();
+
+        $existingComment = Comment::where('commentable_id', $commentable->id)
+            ->where('commentable_type', get_class($commentable))
+            ->where('user_id', $userId)
+            ->whereNull('parent_id')
+            ->exists();
+
+        if ($existingComment) {
+            throw new Exception('Ви вже залишили коментар до цього посту.');
+        }
+    }
+
+    /**
+     * Перевіряє, чи користувач не намагається відповісти на власний коментар.
+     *
+     * @param string $parentId ID батьківського коментаря
+     * @throws Exception Якщо користувач намагається відповісти на власний коментар
+     */
+    private function restrictSelfReply(string $parentId): void
+    {
+        $parentComment = Comment::find($parentId);
+
+        if (!$parentComment) {
+            throw new Exception('Батьківський коментар не знайдено.');
+        }
+
+        if ($parentComment->user_id === Auth::id()) {
+            throw new Exception('Ви не можете відповідати на власний коментар.');
+        }
+    }
+
 
     /**
      * Збільшує лічильник comments_count у моделі, якщо такий стовпець існує.

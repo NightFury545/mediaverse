@@ -18,7 +18,17 @@ import {
     RadioGroup,
     Typography
 } from '@mui/material';
-import {BrokenImage, ChatBubbleOutline, Close, Favorite, Flag, MoreVert, Share, Visibility} from '@mui/icons-material';
+import {
+    BrokenImage,
+    ChatBubbleOutline,
+    Close,
+    Edit,
+    Favorite,
+    Flag,
+    MoreVert,
+    Share,
+    Visibility
+} from '@mui/icons-material';
 import {Carousel} from 'react-responsive-carousel';
 import 'react-responsive-carousel/lib/styles/carousel.min.css';
 import {formatNumber} from '@/utils/formatNumber.js';
@@ -31,6 +41,7 @@ import {STORAGE_PRIVATE_POST_URL, STORAGE_URL} from "@/config/env.js";
 import {useNavigate} from "react-router-dom";
 import DOMPurify from 'dompurify';
 import {toast} from "react-toastify";
+import {useAuth} from "@/Components/Auth/AuthProvider.jsx";
 
 const PLACEHOLDER_IMAGE = 'https://via.placeholder.com/600x600.png?text=Media+Not+Found';
 
@@ -71,6 +82,7 @@ const PostCard = ({
     const queryClient = useQueryClient();
     const carouselRef = useRef(null);
     const navigate = useNavigate();
+    const { user } = useAuth();
 
     const reportReasons = [
         { value: 'Spam', label: 'Спам' },
@@ -141,14 +153,14 @@ const PostCard = ({
     };
 
     const createReportMutation = useMutation(
-        () => reportActions.createReport({ post_id: post.id, reason: reportReason }),
+        () => reportActions.createReport({ post_id: post.id, reason: reportReason }).then(res => res.data),
         {
             onSuccess: () => {
                 toast.success('Скарга надіслана!');
                 handleReportDialogClose();
             },
             onError: (error) => {
-                toast.error('Не вдалося надіслати скаргу. Спробуйте пізніше.');
+                toast.error(error.response?.data?.error || 'Не вдалося надіслати скаргу. Спробуйте пізніше.');
             },
         }
     );
@@ -166,6 +178,12 @@ const PostCard = ({
         if (previewMode) return;
         event.stopPropagation();
         setAnchorEl(event.currentTarget);
+    };
+
+    const handleEditClick = (event) => {
+        event.stopPropagation();
+        setAnchorEl(null);
+        navigate(`/posts/${post.slug}/edit`);
     };
 
     const handleMenuClose = (event) => {
@@ -208,10 +226,12 @@ const PostCard = ({
             onSuccess: () => {
                 queryClient.invalidateQueries(['userLikes']);
                 queryClient.invalidateQueries(['posts']);
+                toast.success('Лайк успішно залишено.');
             },
-            onError: () => {
+            onError: (error) => {
                 setIsLiked(false);
                 setCurrentLikes(prev => prev - 1);
+                toast.error(error.response?.data?.error || error.response?.data?.message || 'Помилка під час залишення лайку.');
             }
         }
     );
@@ -360,12 +380,12 @@ const PostCard = ({
     const getBackgroundUrl = (item) => {
         if (mediaErrors[currentSlide]) return `url(${PLACEHOLDER_IMAGE})`;
         if (previewMode) {
-            return item.type === 'image' ? `url(${item.url})` : `url(${item.thumbnail || item.url || PLACEHOLDER_IMAGE})`;
+            return item?.type === 'image' ? `url(${item?.url})` : `url(${item?.thumbnail || item?.url || PLACEHOLDER_IMAGE})`;
         }
         if (post.visibility === 'public') {
-            return item.type === 'image' ? `url(${STORAGE_URL + item.url})` : `url(${STORAGE_URL + (item.thumbnail || item.url) || PLACEHOLDER_IMAGE})`;
+            return item?.type === 'image' ? `url(${STORAGE_URL + item?.url})` : `url(${STORAGE_URL + (item?.thumbnail || item?.url) || PLACEHOLDER_IMAGE})`;
         }
-        return item.type === 'image' ? `url(${blobUrls[item.url] || PLACEHOLDER_IMAGE})` : `url(${blobUrls[item.thumbnail || item.url] || PLACEHOLDER_IMAGE})`;
+        return item?.type === 'image' ? `url(${blobUrls[item?.url] || PLACEHOLDER_IMAGE})` : `url(${blobUrls[item?.thumbnail || item?.url] || PLACEHOLDER_IMAGE})`;
     };
 
     return (
@@ -488,6 +508,11 @@ const PostCard = ({
                         }
                     }}
                 >
+                    {user?.id === post.user.id && (
+                        <MenuItem onClick={handleEditClick}>
+                            <Edit fontSize="small" /> Редагувати
+                        </MenuItem>
+                    )}
                     <MenuItem onClick={handleReportClick}>
                         <Flag fontSize="small"/> Поскаржитися
                     </MenuItem>

@@ -9,6 +9,7 @@ enum FileExtension: string
     case JPEG = 'jpeg';
     case PNG = 'png';
     case GIF = 'gif';
+    case WEBP = 'webp';
 
     // Відео
     case MP4 = 'mp4';
@@ -22,7 +23,7 @@ enum FileExtension: string
 
     public static function getImageExtensions(): array
     {
-        return [self::JPG->value, self::JPEG->value, self::PNG->value, self::GIF->value];
+        return [self::JPG->value, self::JPEG->value, self::PNG->value, self::GIF->value, self::WEBP->value];
     }
 
     public static function getVideoExtensions(): array

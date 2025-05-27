@@ -127,7 +127,7 @@ const PostDetailsPage = () => {
         isError: isPostError,
         error: postError
     } = useQuery(['post', identifier], () => fetchPost(identifier), {
-        staleTime: 1000 * 60,
+        staleTime: 0,
         retry: false,
         refetchOnWindowFocus: false
     });

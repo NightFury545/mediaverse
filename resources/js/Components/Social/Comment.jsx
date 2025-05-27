@@ -356,8 +356,7 @@ const Comment = ({ comment, postSlug, depth = 0, maxDepth = 3, isLast = false, i
                 setIsRepliesOpen(true);
             },
             onError: (error) => {
-                console.error('Error creating reply:', error);
-                alert(`Помилка створення відповіді: ${error.response?.data?.message || 'Щось пішло не так'}`);
+                toast.error(`${error.response?.data?.error || 'Щось пішло не так'}`);
             },
         }
     );
@@ -560,6 +559,8 @@ const Comment = ({ comment, postSlug, depth = 0, maxDepth = 3, isLast = false, i
                     pt: 0.5,
                     pb: 0.5,
                     minHeight: '48px',
+                    boxSizing: 'border-box',
+                    maxWidth: '100%',
                 }}
             >
                 <TreeLines
@@ -581,7 +582,7 @@ const Comment = ({ comment, postSlug, depth = 0, maxDepth = 3, isLast = false, i
                             zIndex: 1,
                         }}
                     />
-                    <Box sx={{ flexGrow: 1, zIndex: 1 }}>
+                    <Box sx={{ flexGrow: 1, zIndex: 1, maxWidth: '100%' }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.25 }}>
                             <Typography
                                 variant="subtitle2"
@@ -601,6 +602,12 @@ const Comment = ({ comment, postSlug, depth = 0, maxDepth = 3, isLast = false, i
                                 color: '#e0e0e0',
                                 lineHeight: 1.5,
                                 mb: 0.5,
+                                maxWidth: '100%',
+                                wordBreak: 'break-word',
+                                overflowWrap: 'break-word',
+                                whiteSpace: 'normal',
+                                overflowX: 'hidden',
+                                boxSizing: 'border-box',
                                 '& p': { margin: 0 },
                                 '& *': { fontSize: '0.875rem' },
                                 '& h1': { fontSize: '1.125rem' },

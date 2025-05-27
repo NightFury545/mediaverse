@@ -10,7 +10,7 @@ use App\Models\Like;
 use App\Models\Movie;
 use App\Models\Post;
 use Exception;
-use Illuminate\Support\Collection;
+use Illuminate\Contracts\Pagination\CursorPaginator;
 
 class LikeService
 {
@@ -48,10 +48,10 @@ class LikeService
     /**
      * Отримує всі лайки поточного користувача з фільтрацією та сортуванням.
      *
-     * @return Collection
+     * @return CursorPaginator
      * @throws Exception
      */
-    public function getUserLikes(): Collection
+    public function getUserLikes(): CursorPaginator
     {
         return ($this->getUserLikesAction)();
     }

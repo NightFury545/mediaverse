@@ -14,6 +14,7 @@ import {
     Menu,
     MenuItem,
     InputAdornment,
+    Slider,
 } from '@mui/material';
 import { motion } from 'framer-motion';
 import { AddComment, Close, Sort as SortIcon, FilterList as FilterListIcon, Search as SearchIcon } from '@mui/icons-material';
@@ -26,6 +27,7 @@ import { useAuth } from '@/Components/Auth/AuthProvider.jsx';
 import { useNavigate } from 'react-router-dom';
 import { useInfiniteQuery, useMutation, useQueryClient } from 'react-query';
 import debounce from 'lodash.debounce';
+import {toast} from "react-toastify";
 
 // Налаштування Quill
 const quillModules = {
@@ -40,7 +42,7 @@ const quillModules = {
 const quillFormats = [
     'header',
     'bold', 'italic', 'underline',
-    'link', 'blockquote', 'code-block',
+    'link', 'blockquote', 'color',
     'list', 'bullet',
 ];
 
@@ -90,9 +92,9 @@ const PostCommentsSection = ({ post }) => {
         content: '',
         created_at_from: '',
         created_at_to: '',
-        likes_count_from: '',
-        likes_count_to: '',
+        likes_count: [0, 100000],
     });
+    const [tempFilters, setTempFilters] = useState(filters);
     const [sort, setSort] = useState('-created_at');
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -109,7 +111,7 @@ const PostCommentsSection = ({ post }) => {
         }
 
         if (filters.username) {
-            params.append('filter[username]', filters.username);
+            params.append('filter[user.username]', filters.username);
         }
         if (filters.content) {
             params.append('filter[content]', filters.content);
@@ -120,11 +122,11 @@ const PostCommentsSection = ({ post }) => {
         if (filters.created_at_to) {
             params.append('filter[created_at][to]', filters.created_at_to);
         }
-        if (filters.likes_count_from) {
-            params.append('filter[likes_count][from]', filters.likes_count_from);
+        if (filters.likes_count[0] > 0) {
+            params.append('filter[likes_count][from]', filters.likes_count[0]);
         }
-        if (filters.likes_count_to) {
-            params.append('filter[likes_count][to]', filters.likes_count_to);
+        if (filters.likes_count[1] <= 100000) {
+            params.append('filter[likes_count][to]', filters.likes_count[1]);
         }
 
         if (search) {
@@ -160,12 +162,14 @@ const PostCommentsSection = ({ post }) => {
             staleTime: 0,
         }
     );
+
     useEffect(() => {
         queryClient.invalidateQueries(['comments', post.id]);
         return () => {
             queryClient.removeQueries(['comments', post.id]);
         };
     }, [queryClient, post.id]);
+
     useEffect(() => {
         if (!isLoading && !isFetchingNextPage) {
             queryStringRef.current = queryString;
@@ -250,17 +254,13 @@ const PostCommentsSection = ({ post }) => {
                 setIsCommentModalOpen(false);
             },
             onError: (error) => {
-                alert(`Помилка створення коментаря: ${error.message || 'Щось пішло не так'}`);
+                toast.error(`${error.response?.data?.error || Object.values(error.response?.data?.errors || {}).flat().join('\n') || 'Щось пішло не так'}`);
             },
         }
     );
 
     // Обробники
     const handleToggleCommentModal = () => {
-        if (!isAuthenticated) {
-            navigate('/login');
-            return;
-        }
         setIsCommentModalOpen(!isCommentModalOpen);
     };
 
@@ -281,10 +281,29 @@ const PostCommentsSection = ({ post }) => {
     };
 
     const handleFilterChange = (field, value) => {
-        setFilters((prev) => ({ ...prev, [field]: value }));
+        setTempFilters((prev) => ({ ...prev, [field]: value }));
+    };
+
+    const handleLikesRangeChange = (event, newValue) => {
+        setTempFilters((prev) => ({ ...prev, likes_count: newValue }));
     };
 
     const handleApplyFilters = () => {
+        setFilters(tempFilters);
+        queryClient.resetQueries(['comments', post.id]);
+        setIsFilterModalOpen(false);
+    };
+
+    const handleResetFilters = () => {
+        const initialFilters = {
+            username: '',
+            content: '',
+            created_at_from: '',
+            created_at_to: '',
+            likes_count: [0, 1000],
+        };
+        setTempFilters(initialFilters);
+        setFilters(initialFilters);
         queryClient.resetQueries(['comments', post.id]);
         setIsFilterModalOpen(false);
     };
@@ -295,7 +314,6 @@ const PostCommentsSection = ({ post }) => {
 
     const allComments = data?.pages?.flatMap((page) => page.comments) || [];
     const totalComments = data?.pages?.reduce((sum, page) => sum + (page.totalComments || 0), 0) || 0;
-    console.log('allComments:', allComments, 'Query:', queryString);
 
     return (
         <Box
@@ -315,28 +333,33 @@ const PostCommentsSection = ({ post }) => {
             {/* Панель керування */}
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 1, flexWrap: 'wrap' }}>
                 {/* Кнопка додавання коментаря */}
-                {post.comments_enabled && (
-                    <Button
-                        variant="outlined"
-                        startIcon={<AddComment />}
-                        onClick={handleToggleCommentModal}
-                        sx={{
-                            color: '#9c27b0',
+                <Button
+                    variant="outlined"
+                    startIcon={<AddComment />}
+                    onClick={handleToggleCommentModal}
+                    disabled={post.comments_enabled !== true}
+                    sx={{
+                        display: 'inline-flex',
+                        color: '#9c27b0',
+                        borderColor: 'rgba(156, 39, 176, 0.3)',
+                        textTransform: 'none',
+                        '&:hover': {
+                            borderColor: '#9c27b0',
+                            backgroundColor: 'rgba(156, 39, 176, 0.1)',
+                        },
+                        '&.Mui-disabled': {
+                            color: 'rgba(156, 39, 176, 0.3)',
                             borderColor: 'rgba(156, 39, 176, 0.3)',
-                            textTransform: 'none',
-                            '&:hover': {
-                                borderColor: '#9c27b0',
-                                backgroundColor: 'rgba(156, 39, 176, 0.1)',
-                            },
-                        }}
-                    >
-                        Додати коментар
-                    </Button>
-                )}
+                            opacity: 0.5,
+                            display: 'inline-flex',
+                        },
+                    }}
+                >
+                    Додати коментар
+                </Button>
 
                 {/* Пошук і іконки */}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 'auto' }}>
-                    {/* Компактний пошук, притиснутий до правої частини */}
                     <TextField
                         placeholder="Пошук..."
                         variant="outlined"
@@ -367,7 +390,6 @@ const PostCommentsSection = ({ post }) => {
                         }}
                     />
 
-                    {/* Сортування та фільтрація */}
                     <IconButton
                         onClick={handleSortClick}
                         sx={{
@@ -446,7 +468,7 @@ const PostCommentsSection = ({ post }) => {
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                         <TextField
                             label="Нік користувача"
-                            value={filters.username}
+                            value={tempFilters.username}
                             onChange={(e) => handleFilterChange('username', e.target.value)}
                             fullWidth
                             variant="outlined"
@@ -462,7 +484,7 @@ const PostCommentsSection = ({ post }) => {
                         />
                         <TextField
                             label="Вміст коментаря"
-                            value={filters.content}
+                            value={tempFilters.content}
                             onChange={(e) => handleFilterChange('content', e.target.value)}
                             fullWidth
                             variant="outlined"
@@ -480,7 +502,7 @@ const PostCommentsSection = ({ post }) => {
                             <TextField
                                 label="Дата від"
                                 type="date"
-                                value={filters.created_at_from}
+                                value={tempFilters.created_at_from}
                                 onChange={(e) => handleFilterChange('created_at_from', e.target.value)}
                                 fullWidth
                                 InputLabelProps={{ shrink: true }}
@@ -497,7 +519,7 @@ const PostCommentsSection = ({ post }) => {
                             <TextField
                                 label="Дата до"
                                 type="date"
-                                value={filters.created_at_to}
+                                value={tempFilters.created_at_to}
                                 onChange={(e) => handleFilterChange('created_at_to', e.target.value)}
                                 fullWidth
                                 InputLabelProps={{ shrink: true }}
@@ -512,56 +534,61 @@ const PostCommentsSection = ({ post }) => {
                                 }}
                             />
                         </Box>
-                        <Box sx={{ display: 'flex', gap: 2 }}>
-                            <TextField
-                                label="Лайки від"
-                                type="number"
-                                value={filters.likes_count_from}
-                                onChange={(e) => handleFilterChange('likes_count_from', e.target.value)}
-                                fullWidth
-                                variant="outlined"
+                        <Box sx={{ px: 2 }}>
+                            <Typography sx={{ color: '#b0b0b0', mb: 1 }}>
+                                Кількість лайків: {tempFilters.likes_count[0]} - {tempFilters.likes_count[1]}
+                            </Typography>
+                            <Slider
+                                value={tempFilters.likes_count}
+                                onChange={handleLikesRangeChange}
+                                valueLabelDisplay="auto"
+                                min={0}
+                                max={100000}
                                 sx={{
-                                    '& .MuiOutlinedInput-root': {
-                                        backgroundColor: 'rgba(10, 10, 15, 0.9)',
-                                        color: '#e0e0e0',
-                                        '& fieldset': { borderColor: 'rgba(156, 39, 176, 0.3)' },
-                                        '&:hover fieldset': { borderColor: '#9c27b0' },
+                                    color: '#9c27b0',
+                                    '& .MuiSlider-thumb': {
+                                        '&:hover, &.Mui-focusVisible': {
+                                            boxShadow: '0 0 0 8px rgba(156, 39, 176, 0.16)',
+                                        },
                                     },
-                                    '& .MuiInputLabel-root': { color: '#b0b0b0' },
-                                }}
-                            />
-                            <TextField
-                                label="Лайки до"
-                                type="number"
-                                value={filters.likes_count_to}
-                                onChange={(e) => handleFilterChange('likes_count_to', e.target.value)}
-                                fullWidth
-                                variant="outlined"
-                                sx={{
-                                    '& .MuiOutlinedInput-root': {
-                                        backgroundColor: 'rgba(10, 10, 15, 0.9)',
-                                        color: '#e0e0e0',
-                                        '& fieldset': { borderColor: 'rgba(156, 39, 176, 0.3)' },
-                                        '&:hover fieldset': { borderColor: '#9c27b0' },
+                                    '& .MuiSlider-track': {
+                                        backgroundColor: '#9c27b0',
                                     },
-                                    '& .MuiInputLabel-root': { color: '#b0b0b0' },
+                                    '& .MuiSlider-rail': {
+                                        backgroundColor: 'rgba(156, 39, 176, 0.3)',
+                                    },
                                 }}
                             />
                         </Box>
-                        <Button
-                            variant="contained"
-                            onClick={handleApplyFilters}
-                            sx={{
-                                bgcolor: '#9c27b0',
-                                '&:hover': {
-                                    bgcolor: '#7b1fa2',
-                                    boxShadow: '0 0 10px rgba(156, 39, 176, 0.5)',
-                                },
-                                mt: 2,
-                            }}
-                        >
-                            Застосувати
-                        </Button>
+                        <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+                            <Button
+                                variant="contained"
+                                onClick={handleApplyFilters}
+                                sx={{
+                                    bgcolor: '#9c27b0',
+                                    '&:hover': {
+                                        bgcolor: '#7b1fa2',
+                                        boxShadow: '0 0 10px rgba(156, 39, 176, 0.5)',
+                                    },
+                                }}
+                            >
+                                Застосувати
+                            </Button>
+                            <Button
+                                variant="outlined"
+                                onClick={handleResetFilters}
+                                sx={{
+                                    color: '#b0b0b0',
+                                    borderColor: 'rgba(156, 39, 176, 0.3)',
+                                    '&:hover': {
+                                        borderColor: '#9c27b0',
+                                        backgroundColor: 'rgba(156, 39, 176, 0.1)',
+                                    },
+                                }}
+                            >
+                                Скинути
+                            </Button>
+                        </Box>
                     </Box>
                 </DialogContent>
             </Dialog>
@@ -667,7 +694,7 @@ const PostCommentsSection = ({ post }) => {
                 </Box>
             ) : isError ? (
                 <Typography variant="body2" color="error">
-                    Помилка завантаження коментарів: ${error.response?.data?.message || 'Щось пішло не так'}
+                    Помилка завантаження коментарів: {error.response?.data?.error || 'Щось пішло не так'}
                 </Typography>
             ) : totalComments === 0 ? (
                 <Typography variant="body2" sx={{ color: '#b0b0b0' }}>

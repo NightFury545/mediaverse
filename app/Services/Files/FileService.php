@@ -22,9 +22,9 @@ class FileService
      */
     public function saveFile(UploadedFile $file, string $folder = 'attachments', string $disk = 'public'): string
     {
-        if (in_array(strtolower($file->getClientOriginalExtension()), FileExtension::getImageExtensions())) {
+        /*if (in_array(strtolower($file->getClientOriginalExtension()), FileExtension::getImageExtensions())) {
             $file = $this->convertToWebp($file);
-        }
+        }*/
 
         $fileName = Str::uuid() . '.' . $file->getClientOriginalExtension();
         return Storage::disk($disk)->putFileAs($folder, $file, $fileName);
@@ -72,10 +72,8 @@ class FileService
         try {
             $manager = new ImageManager(new Driver());
             $image = $manager->read($file->getPathname())->toWebp($quality);
-
             $tmpPath = tempnam(sys_get_temp_dir(), 'webp_') . '.webp';
             $image->save($tmpPath);
-
             return new UploadedFile(
                 $tmpPath,
                 pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME) . '.webp',

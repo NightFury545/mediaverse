@@ -28,8 +28,7 @@ class GetTagsAction
                     AllowedFilter::custom('created_at', new RangeFilter()),
                 ])
                 ->allowedSorts(['created_at', 'name', 'posts_count'])
-                ->cursorPaginate($perPage)
-                ->withQueryString();
+                ->paginate(20);
         } catch (Exception $e) {
             throw new Exception('Сталася помилка при завантаженні тегів.');
         }

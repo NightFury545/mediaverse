@@ -21,7 +21,7 @@ trait HasAttachments
         static::updating(function ($model) {
             if ($model->isDirty('visibility')) {
                 $oldVisibility = $model->getOriginal('visibility');
-                $newVisibility = $model->visibility;
+                $newVisibility = $model->visibility->value;
 
                 if ($oldVisibility !== $newVisibility && !empty($model->attachments)) {
                     foreach ((array) $model->attachments as $file) {

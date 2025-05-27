@@ -28,12 +28,21 @@ import {
     ArrowDownward as ArrowDownwardIcon,
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
-import { useParams } from 'react-router-dom';
+import {useNavigate, useParams} from 'react-router-dom';
 import { useAuth } from '@/Components/Auth/AuthProvider.jsx';
 import { useInfiniteQuery, useMutation, useQueryClient } from 'react-query';
 import Message from './Message';
 import { chatActions, messageActions } from '@/api/actions';
 import { motion } from 'framer-motion';
+
+// Debounce utility
+const debounce = (func, wait) => {
+    let timeout;
+    return (...args) => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func(...args), wait);
+    };
+};
 
 // Constants for styles
 const COLORS = {
@@ -78,9 +87,9 @@ const ChatComponent = ({ chatUser, isLoading }) => {
     const messagesContainerRef = useRef(null);
     const fileInputRef = useRef(null);
     const inputContainerRef = useRef(null);
-    const observer = useRef();
     const loadingRef = useRef(false);
     const pendingMessages = useRef(new Map());
+    const navigate = useNavigate();
 
     const emojis = [
         '😊', '👍', '🔥', '❤️', '😂',
@@ -100,12 +109,12 @@ const ChatComponent = ({ chatUser, isLoading }) => {
     } = useInfiniteQuery(
         ['messages', chatId],
         ({ pageParam }) => {
-            return messageActions.getMessages(chatId, pageParam ? { cursor: pageParam } : { latest: true });
+            return messageActions.getMessages(chatId, pageParam ? { cursor: pageParam } : '');
         },
         {
             getNextPageParam: (lastPage) => {
-                const cursor = lastPage.data.next_cursor || lastPage.data.prev_cursor;
-                return cursor || undefined;
+                const cursor = lastPage.data.next_cursor;
+                return cursor ? cursor : undefined;
             },
             enabled: !!user?.id && !!chatId && !!user.email_verified_at,
             staleTime: 1000 * 60,
@@ -211,7 +220,7 @@ const ChatComponent = ({ chatUser, isLoading }) => {
                     ),
                 }));
                 pendingMessages.current.delete(context.tempId);
-                toast.error('Не вдалося надіслати повідомлення');
+                toast.error(error.response?.data?.error || error.response?.data?.message || 'Не вдалося надіслати повідомлення');
             },
         }
     );
@@ -268,57 +277,34 @@ const ChatComponent = ({ chatUser, isLoading }) => {
     }, [data, scrollToBottom]);
 
     // Handle scroll for pagination and unread messages
-    const handleScroll = useCallback(() => {
-        if (!messagesContainerRef.current || isFetching) return;
+    const handleScroll = useCallback(debounce(() => {
+        if (!messagesContainerRef.current || isFetching || loadingRef.current || !hasNextPage) return;
 
         const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
         const isAtBottom = scrollHeight - scrollTop - clientHeight < 100;
+        const isAtTop = scrollTop < 100;
 
         setShowScrollButton(!isAtBottom);
         if (isAtBottom) {
             markMessagesAsRead();
         }
-    }, [isFetching, markMessagesAsRead]);
 
-    // IntersectionObserver for loading older messages
-    const firstMessageObserver = useCallback(
-        (node) => {
-            if (isFetching || loadingRef.current || !hasNextPage) {
-                return;
-            }
-            if (observer.current) observer.current.disconnect();
+        if (isAtTop && hasNextPage) {
+            loadingRef.current = true;
+            const scrollHeightBefore = messagesContainerRef.current.scrollHeight;
+            const scrollTopBefore = messagesContainerRef.current.scrollTop;
 
-            observer.current = new IntersectionObserver(
-                (entries) => {
-                    if (entries[0].isIntersecting && hasNextPage) {
-                        loadingRef.current = true;
-                        const scrollHeightBefore = messagesContainerRef.current.scrollHeight;
-                        const scrollTopBefore = messagesContainerRef.current.scrollTop;
-
-                        fetchNextPage().then(() => {
-                            const scrollHeightAfter = messagesContainerRef.current.scrollHeight;
-                            const newScrollTop = scrollTopBefore + (scrollHeightAfter - scrollHeightBefore);
-                            messagesContainerRef.current.scrollTop = newScrollTop;
-                            loadingRef.current = false;
-                        }).catch((error) => {
-                            loadingRef.current = false;
-                            toast.error('Не вдалося завантажити старіші повідомлення');
-                        });
-                    }
-                },
-                {
-                    root: messagesContainerRef.current,
-                    rootMargin: '200px',
-                    threshold: 0.1,
-                }
-            );
-
-            if (node) {
-                observer.current.observe(node);
-            }
-        },
-        [isFetching, hasNextPage, fetchNextPage]
-    );
+            fetchNextPage().then(() => {
+                const scrollHeightAfter = messagesContainerRef.current.scrollHeight;
+                const newScrollTop = scrollTopBefore + (scrollHeightAfter - scrollHeightBefore);
+                messagesContainerRef.current.scrollTop = newScrollTop;
+                loadingRef.current = false;
+            }).catch((error) => {
+                loadingRef.current = false;
+                toast.error('Не вдалося завантажити старіші повідомлення');
+            });
+        }
+    }, 200), [isFetching, hasNextPage, fetchNextPage, markMessagesAsRead]);
 
     // WebSocket for real-time messages
     useEffect(() => {
@@ -710,6 +696,7 @@ const ChatComponent = ({ chatUser, isLoading }) => {
         try {
             await chatActions.deleteChat(chatId);
             toast.success('Чат видалено!');
+            navigate('/chats');
         } catch (error) {
             toast.error('Не вдалося видалити чат');
             console.error(error);
@@ -942,7 +929,7 @@ const ChatComponent = ({ chatUser, isLoading }) => {
                                         size={40}
                                         thickness={4}
                                         sx={{ color: COLORS.accent }}
-                                        />
+                                    />
                                 </Box>
                             </motion.div>
                         )}
@@ -975,7 +962,6 @@ const ChatComponent = ({ chatUser, isLoading }) => {
                                         id={`message-${message.id}`}
                                         previousMessage={index > 0 ? allMessages[index - 1] : null}
                                         nextMessage={index < allMessages.length - 1 ? allMessages[index + 1] : null}
-                                        ref={index === 0 ? firstMessageObserver : null}
                                     />
                                 ))}
                                 <div ref={messagesEndRef} />

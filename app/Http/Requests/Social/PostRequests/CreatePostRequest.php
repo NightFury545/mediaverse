@@ -27,7 +27,7 @@ class CreatePostRequest extends FormRequest
         $mimes = implode(',', $allowedExtensions);
 
         return [
-            'title' => 'required|string|max:36',
+            'title' => 'required|string|min:3|max:36',
             'content' => 'required|string|max:564',
             'tags' => 'nullable|array',
             'tags.*' => 'string|min:2|max:24',

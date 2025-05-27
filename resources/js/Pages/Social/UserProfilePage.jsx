@@ -1,23 +1,23 @@
-import React, { useState, useMemo } from 'react';
-import { Box, useMediaQuery, useTheme } from '@mui/material';
-import { StarBorder } from '@mui/icons-material';
-import { motion } from 'framer-motion';
-import { useQuery, useMutation, useInfiniteQuery, useQueryClient } from 'react-query';
-import { useParams, useNavigate } from 'react-router-dom';
-import { userActions, postActions, friendshipActions, chatActions } from '@/api/actions';
-import { useAuth } from '@/Components/Auth/AuthProvider.jsx';
-import { useIsUserOnline } from '@/Components/Social/OnlineUsersProvider.jsx';
+import React, {useMemo, useState} from 'react';
+import {Box, useMediaQuery, useTheme} from '@mui/material';
+import {StarBorder} from '@mui/icons-material';
+import {motion} from 'framer-motion';
+import {useInfiniteQuery, useMutation, useQuery, useQueryClient} from 'react-query';
+import {useNavigate, useParams} from 'react-router-dom';
+import {chatActions, friendshipActions, likeActions, postActions, userActions} from '@/api/actions';
+import {useAuth} from '@/Components/Auth/AuthProvider.jsx';
+import {useIsUserOnline} from '@/Components/Social/OnlineUsersProvider.jsx';
 import ProfileLoadingPlaceholder from '@/Components/Social/ProfileLoadingPlaceholder.jsx';
 import ProfileHeader from '@/Components/Social/ProfileHeader.jsx';
 import ProfileInfo from '@/Components/Social/ProfileInfo.jsx';
 import ProfileTabs from '@/Components/Social/ProfileTabs.jsx';
 import EditProfileDialog from '@/Components/Social/EditProfileDialog.jsx';
 import UserNotFound from '@/Components/Social/UserNotFound.jsx';
-import { toast } from 'react-toastify';
+import {toast} from 'react-toastify';
 
 const UserProfilePage = () => {
-    const { username } = useParams();
-    const { isAuthenticated, user, setUser } = useAuth();
+    const {username} = useParams();
+    const {isAuthenticated, user, setUser} = useAuth();
     const navigate = useNavigate();
     const queryClient = useQueryClient();
     const theme = useTheme();
@@ -51,7 +51,7 @@ const UserProfilePage = () => {
         return `Був(ла) ${Math.floor(diffHours / 24)} дн. тому`;
     };
 
-    const { data: profileUser, isLoading, isError } = useQuery(
+    const {data: profileUser, isLoading, isError} = useQuery(
         ['user', username],
         () => userActions.getUser(username).then((res) => res.data.data),
         {
@@ -75,12 +75,13 @@ const UserProfilePage = () => {
         }
     );
 
-    const { data: friendsData } = useQuery(
+    const {data: friendsData} = useQuery(
         ['friends', username],
         () => friendshipActions.getFriends(username).then((res) => res.data),
         {
             enabled: !!profileUser,
             retry: false,
+            refetchOnWindowFocus: false,
             select: (data) =>
                 data.map((friend) => ({
                     id: friend.id,
@@ -91,16 +92,16 @@ const UserProfilePage = () => {
         }
     );
 
-    const { data: sentRequests } = useQuery(
+    const {data: sentRequests} = useQuery(
         ['sentRequests', user?.username],
         () => friendshipActions.getSentFriendRequests(user.username).then((res) => res.data),
-        { enabled: isAuthenticated && !!user }
+        {enabled: isAuthenticated && !!user}
     );
 
-    const { data: receivedRequests } = useQuery(
+    const {data: receivedRequests} = useQuery(
         ['receivedRequests', user?.username],
         () => friendshipActions.getReceivedFriendRequests(user.username).then((res) => res.data),
-        { enabled: isAuthenticated && !!user }
+        {enabled: isAuthenticated && !!user}
     );
 
     const friendStatus = useMemo(() => {
@@ -110,11 +111,11 @@ const UserProfilePage = () => {
         }
         const sentRequest = sentRequests?.find((req) => req.friend_id === profileUser.id);
         if (sentRequest) {
-            return { status: 'pending_sent', friendshipId: sentRequest.id };
+            return {status: 'pending_sent', friendshipId: sentRequest.id};
         }
         const receivedRequest = receivedRequests?.find((req) => req.user_id === profileUser.id);
         if (receivedRequest) {
-            return { status: 'pending_received', friendshipId: receivedRequest.id };
+            return {status: 'pending_received', friendshipId: receivedRequest.id};
         }
         return 'none';
     }, [friendsData, sentRequests, receivedRequests, profileUser, user, isAuthenticated]);
@@ -124,13 +125,20 @@ const UserProfilePage = () => {
         fetchNextPage: fetchNextPosts,
         hasNextPage: hasNextPosts,
         isFetchingNextPage: isFetchingNextPosts,
+        isLoading: isLoadingPosts,
+        isFetching: isFetchingPosts,
     } = useInfiniteQuery(
         ['userPosts', username],
-        ({ pageParam = null }) =>
-            postActions.getPosts({ 'filter[user.username]': username, perPage: 10, cursor: pageParam }).then((res) => res.data),
+        ({pageParam = null}) =>
+            postActions.getPosts({
+                'filter[user.username]': username,
+                perPage: 10,
+                cursor: pageParam
+            }).then((res) => res.data),
         {
             getNextPageParam: (lastPage) => lastPage.next_cursor || undefined,
             enabled: !!profileUser,
+            refetchOnWindowFocus: false,
             select: (data) => ({
                 pages: data.pages.map((page) => ({
                     ...page,
@@ -165,37 +173,51 @@ const UserProfilePage = () => {
         fetchNextPage: fetchNextLikedPosts,
         hasNextPage: hasNextLikedPosts,
         isFetchingNextPage: isFetchingNextLikedPosts,
+        isLoading: isLoadingLikedPosts,
+        isFetching: isFetchingLikedPosts,
     } = useInfiniteQuery(
         ['likedPosts', username],
-        ({ pageParam = 1 }) => postActions.getLikedPosts(username, pageParam).then((res) => res.data),
+        ({pageParam = null}) =>
+            likeActions.getUserLikes({
+                username,
+                'filter[likeable_type]': 'App\\Models\\Post',
+                perPage: 10,
+                cursor: pageParam
+            }).then((res) => res.data),
         {
-            getNextPageParam: (lastPage) => (lastPage.current_page < lastPage.last_page ? lastPage.current_page + 1 : undefined),
-            enabled: !!profileUser,
+            getNextPageParam: (lastPage) => lastPage.next_cursor || undefined,
+            enabled: !!profileUser && isAuthenticated && user.username === profileUser.username,
+            retry: false,
+            refetchOnWindowFocus: false,
             select: (data) => ({
                 pages: data.pages.map((page) => ({
                     ...page,
-                    data: page.data.map((post) => ({
-                        id: post.id,
-                        title: post.title,
-                        content: post.content,
-                        slug: post.slug,
-                        likes_count: post.likes_count || 0,
-                        comments_count: post.comments_count || 0,
-                        visibility: post.visibility || 'public',
-                        created_at: post.created_at,
+                    data: page.data.data.map((like) => ({
+                        id: like.likeable.id,
+                        title: like.likeable.title,
+                        content: like.likeable.content,
+                        slug: like.likeable.slug,
+                        likes_count: like.likeable.likes_count || 0,
+                        comments_count: like.likeable.comments_count || 0,
+                        views_count: like.likeable.views_count || 0,
+                        visibility: like.likeable.visibility || 'public',
+                        created_at: like.likeable.created_at,
                         user: {
-                            id: post.user?.id,
-                            username: post.user?.username || 'Anonymous',
-                            avatar: post.user?.avatar || `https://i.pravatar.cc/150?img=${post.user?.id || 0}`,
+                            id: like.likeable.user?.id,
+                            username: like.likeable.user?.username || 'Anonymous',
+                            avatar: like.likeable.user?.avatar || `https://i.pravatar.cc/150?img=${like.likeable.user?.id || 0}`,
                         },
-                        tags: post.tags ? post.tags.map((tag) => tag.name) : [],
-                        attachments: post.attachments || [],
-                        user_liked: post.user_liked || false,
-                        like_id: post.like_id || null,
+                        tags: like.likeable.tags ? like.likeable.tags.map((tag) => tag.name) : [],
+                        attachments: like.likeable.attachments || [],
+                        user_liked: like.likeable.user_liked || false,
+                        like_id: like.likeable.like_id || null,
                     })),
                 })),
                 pageParams: data.pageParams,
             }),
+            onError: (error) => {
+                toast.error(error.response?.data?.message || 'Помилка завантаження лайкнутих постів');
+            },
         }
     );
 
@@ -321,7 +343,14 @@ const UserProfilePage = () => {
         }
     );
 
-    const handleTabChange = (event, newValue) => setActiveTab(newValue);
+    const handleTabChange = (event, newValue) => {
+        if (newValue === 'likedPosts' && !(isAuthenticated && user?.username === profileUser?.username)) {
+            setActiveTab('posts');
+        } else {
+            setActiveTab(newValue);
+        }
+    };
+
     const handleEditOpen = () => {
         setEditForm({
             username: profileUser.username,
@@ -335,14 +364,17 @@ const UserProfilePage = () => {
         });
         setIsEditDialogOpen(true);
     };
+
     const handleEditClose = () => setIsEditDialogOpen(false);
+
     const handleCreateChat = () => {
-        createChatMutation.mutate({ user_two_id: profileUser.id });
+        createChatMutation.mutate({user_two_id: profileUser.id});
     };
+
     const handleFriendAction = () => {
         if (!isAuthenticated) return navigate('/login');
         if (friendStatus === 'none') {
-            sendFriendRequestMutation.mutate({ friend_id: profileUser.id });
+            sendFriendRequestMutation.mutate({friend_id: profileUser.id});
         } else if (friendStatus.status === 'pending_sent') {
             cancelFriendRequestMutation.mutate(friendStatus.friendshipId);
         } else if (friendStatus.status === 'pending_received') {
@@ -354,6 +386,7 @@ const UserProfilePage = () => {
             }
         }
     };
+
     const handleRejectFriendRequest = () => {
         if (friendStatus.status === 'pending_received') {
             rejectFriendRequestMutation.mutate(friendStatus.friendshipId);
@@ -361,14 +394,14 @@ const UserProfilePage = () => {
     };
 
     if (isLoading) {
-        return <ProfileLoadingPlaceholder />;
+        return <ProfileLoadingPlaceholder/>;
     }
 
     if (isError) {
-        return <UserNotFound />;
+        return <UserNotFound/>;
     }
 
-    const isOwner = isAuthenticated && user.username === profileUser.username;
+    const isOwner = isAuthenticated && user?.username === profileUser?.username;
 
     return (
         <Box
@@ -377,7 +410,7 @@ const UserProfilePage = () => {
                 background: 'linear-gradient(180deg, rgba(10, 10, 15, 0.95) 0%, rgba(20, 20, 30, 0.9) 100%)',
                 position: 'relative',
                 overflow: 'hidden',
-                px: { xs: 1, sm: 2, md: 4 },
+                px: {xs: 1, sm: 2, md: 4},
                 py: 4,
             }}
         >
@@ -389,24 +422,24 @@ const UserProfilePage = () => {
                         top: `${20 + i * 15}%`,
                         left: `${10 + i * 20}%`,
                         color: 'rgba(156, 39, 176, 0.3)',
-                        fontSize: { xs: '1rem', sm: '1.5rem' },
+                        fontSize: {xs: '1rem', sm: '1.5rem'},
                         animation: 'twinkle 3s infinite',
                         animationDelay: `${i * 0.5}s`,
                         '@keyframes twinkle': {
-                            '0%, 100%': { opacity: 0.3 },
-                            '50%': { opacity: 0.8 },
+                            '0%, 100%': {opacity: 0.3},
+                            '50%': {opacity: 0.8},
                         },
                     }}
                 />
             ))}
             <svg
-                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+                style={{position: 'absolute', top: 0, left: 0, width: '100%', height: '100%'}}
                 preserveAspectRatio="none"
             >
                 <defs>
                     <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" style={{ stopColor: '#9c27b0', stopOpacity: 0.3 }} />
-                        <stop offset="100%" style={{ stopColor: 'transparent', stopOpacity: 0 }} />
+                        <stop offset="0%" style={{stopColor: '#9c27b0', stopOpacity: 0.3}}/>
+                        <stop offset="100%" style={{stopColor: 'transparent', stopOpacity: 0}}/>
                     </linearGradient>
                 </defs>
                 <path
@@ -414,14 +447,14 @@ const UserProfilePage = () => {
                     stroke="url(#lineGradient)"
                     strokeWidth="2"
                     fill="none"
-                    style={{ opacity: 0.5 }}
+                    style={{opacity: 0.5}}
                 />
             </svg>
-            <Box sx={{ maxWidth: '1200px', mx: 'auto', position: 'relative' }}>
+            <Box sx={{maxWidth: '1200px', mx: 'auto', position: 'relative'}}>
                 <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
+                    initial={{opacity: 0, y: 20}}
+                    animate={{opacity: 1, y: 0}}
+                    transition={{duration: 0.5}}
                 >
                     <ProfileHeader
                         profileUser={profileUser}
@@ -437,7 +470,7 @@ const UserProfilePage = () => {
                         formatLastSeen={formatLastSeen}
                         isCreatingChat={createChatMutation.isLoading}
                     />
-                    <ProfileInfo profileUser={profileUser} isMobile={isMobile} />
+                    <ProfileInfo profileUser={profileUser} isMobile={isMobile}/>
                     <ProfileTabs
                         activeTab={activeTab}
                         handleTabChange={handleTabChange}
@@ -452,6 +485,9 @@ const UserProfilePage = () => {
                         fetchNextLikedPosts={fetchNextLikedPosts}
                         navigate={navigate}
                         isMobile={isMobile}
+                        isOwner={isOwner}
+                        isLoading={isLoadingLikedPosts}
+                        isFetching={isFetchingLikedPosts}
                     />
                 </motion.div>
                 <EditProfileDialog

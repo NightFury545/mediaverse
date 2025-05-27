@@ -31,7 +31,7 @@ class ReportController extends Controller
             ], 201);
         } catch (Exception $e) {
             return response()->json([
-                'error' => 'Не вдалося створити скаргу: ' . $e->getMessage(),
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
