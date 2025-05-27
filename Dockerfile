@@ -1,24 +1,25 @@
-FROM richarvey/nginx-php-fpm:3.1.6
+FROM php:8.2-fpm
 
-# Laravel
-COPY laravel /var/www/html
+# Встановлюємо залежності для Laravel
+RUN apt-get update && apt-get install -y \
+    libzip-dev zip unzip git curl \
+    && docker-php-ext-install pdo pdo_mysql zip
 
-# React білд уже у laravel/public — нічого додатково не треба копіювати
+# Встановлюємо Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-ENV SKIP_COMPOSER 1
-ENV WEBROOT /var/www/html/public
-ENV PHP_ERRORS_STDERR 1
-ENV RUN_SCRIPTS 1
-ENV REAL_IP_HEADER 1
+# Копіюємо Laravel додаток
+WORKDIR /var/www/html
+COPY . .
 
-# Laravel ENV
-ENV APP_ENV production
-ENV APP_DEBUG false
-ENV LOG_CHANNEL stderr
-ENV COMPOSER_ALLOW_SUPERUSER 1
+# Встановлюємо залежності через Composer
+RUN composer install --no-dev --optimize-autoloader
 
-COPY nginx.conf /etc/nginx/sites-available/default
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+# Права для storage і bootstrap/cache
+RUN chown -R www-data:www-data storage bootstrap/cache
 
-CMD ["/entrypoint.sh"]
+# Відкриваємо порт
+EXPOSE 9000
+
+# Запускаємо php-fpm
+CMD ["php-fpm"]
