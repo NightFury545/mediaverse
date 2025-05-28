@@ -26,5 +26,5 @@ else
   php artisan key:generate --force || true
 fi
 
-# Запуск Laravel через CMD
+# Запуск основної команди (php artisan serve ...)
 exec "$@"
