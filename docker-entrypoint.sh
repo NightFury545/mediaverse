@@ -1,17 +1,30 @@
 #!/bin/sh
 
-# Якщо папка vendor відсутня, виконуємо composer install
+set -e
+
+# Composer install (тільки якщо відсутній vendor)
 if [ ! -d "vendor" ]; then
-  echo "Vendor folder not found. Running composer install..."
+  echo "📦 Running composer install..."
   composer install --no-interaction --optimize-autoloader
 fi
 
-# Запускаємо npm install і збірку фронтенду (опційно, якщо React/Vite в проєкті)
-if [ ! -d "node_modules" ]; then
-  echo "Installing npm packages and building frontend..."
-  npm install
-  npm run build
+# npm install + build (тільки якщо є package.json і відсутній node_modules)
+if [ -f "package.json" ]; then
+  if [ ! -d "node_modules" ]; then
+    echo "🔧 Installing npm dependencies..."
+    npm install
+  fi
+
+  echo "🔨 Building frontend (Vite)..."
+  npm run build || echo "⚠️ Vite build failed, continuing..."
 fi
 
-# Запускаємо основну команду (наприклад, php artisan serve)
+# Laravel key:generate (тільки якщо ключ відсутній)
+if [ ! -f ".env" ]; then
+  echo "⚠️ .env file is missing. You should add it!"
+else
+  php artisan key:generate --force || true
+fi
+
+# Запуск Laravel через CMD
 exec "$@"
