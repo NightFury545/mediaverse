@@ -1,19 +1,39 @@
-FROM php:8.2-fpm
+# 1. Базовий образ
+FROM php:8.2-cli
 
+# 2. Встановити системні пакети
 RUN apt-get update && apt-get install -y \
-    libzip-dev zip unzip git curl libicu-dev \
-    && docker-php-ext-install pdo pdo_mysql zip intl
+    unzip git curl zip libpng-dev libonig-dev libxml2-dev nodejs npm \
+    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
 
-# Встановлюємо Composer
+# 3. Встановити Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-WORKDIR /var/www/html
-COPY . .
+# 4. Створити робочу директорію
+WORKDIR /var/www
 
-RUN composer install --no-dev --optimize-autoloader
+# 5. Копіювати Laravel-код
+COPY backend/ /var/www/
 
-RUN chown -R www-data:www-data storage bootstrap/cache
+# 6. Встановити Laravel-залежності
+RUN composer install --no-interaction --optimize-autoloader
 
-EXPOSE 9000
+# 7. Копіювати React-код і зібрати його
+COPY frontend/ /var/www/frontend
+WORKDIR /var/www/frontend
+RUN npm install && npm run build
 
-CMD ["php-fpm"]
+# 8. Копіювати білд в Laravel `public/`
+RUN cp -r build/* /var/www/public/
+
+# 9. Повернутися до кореня Laravel
+WORKDIR /var/www
+
+# 10. php.ini з великими лімітами
+RUN echo "upload_max_filesize=100M\npost_max_size=100M\nmemory_limit=512M" > /usr/local/etc/php/php.ini
+
+# 11. Відкрити порт для Render
+EXPOSE 8080
+
+# 12. Команда запуску Laravel через php artisan serve
+CMD php artisan serve --host=0.0.0.0 --port=8080
