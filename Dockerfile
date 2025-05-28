@@ -22,7 +22,7 @@ RUN echo "upload_max_filesize=100M\npost_max_size=150M\nmemory_limit=512M" > /us
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# Відкрити порт
+# Відкрити порт (для Render або локального запуску)
 EXPOSE 8080
 
 # Запуск через entrypoint

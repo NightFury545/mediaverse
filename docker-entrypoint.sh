@@ -23,7 +23,14 @@ fi
 if [ ! -f ".env" ]; then
   echo "⚠️ .env file is missing. You should add it!"
 else
+  echo "🔑 Generating app key..."
   php artisan key:generate --force || true
+fi
+
+# Laravel migrate (тільки якщо .env існує)
+if [ -f ".env" ]; then
+  echo "🧬 Running database migrations..."
+  php artisan migrate --force || echo "⚠️ Migration failed, continuing..."
 fi
 
 # Запуск основної команди (php artisan serve ...)
