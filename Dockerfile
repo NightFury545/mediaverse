@@ -15,17 +15,16 @@ WORKDIR /var/www
 # Копіювати Laravel-проєкт
 COPY . .
 
-# Встановити бекенд-залежності
-RUN composer install --no-interaction --optimize-autoloader
+# Встановити php.ini з великими лімітами
+RUN echo "upload_max_filesize=100M\npost_max_size=150M\nmemory_limit=512M" > /usr/local/etc/php/php.ini
 
-# Встановити frontend-залежності (якщо React інтегрований через Vite)
-RUN npm install && npm run build
-
-# php.ini з великими лімітами
-RUN echo "upload_max_filesize=100M\npost_max_size=100M\nmemory_limit=512M" > /usr/local/etc/php/php.ini
+# Копіюємо entrypoint-скрипт (буде в наступному кроці)
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Відкрити порт
 EXPOSE 8080
 
-# Запуск Laravel сервера
-CMD php artisan serve --host=0.0.0.0 --port=8080
+# Запуск через entrypoint скрипт
+ENTRYPOINT ["docker-entrypoint.sh"]
+CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8080"]
