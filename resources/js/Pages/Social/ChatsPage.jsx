@@ -1,18 +1,87 @@
-import React from 'react';
+import React, { useCallback, useRef, useState, useEffect, memo } from 'react';
 import {
     Box,
     Typography,
     Skeleton,
     useMediaQuery,
     useTheme,
-    Button, Container,
+    Container,
+    CircularProgress,
+    TextField,
+    InputAdornment,
+    Button,
 } from '@mui/material';
 import { motion } from 'framer-motion';
-import { useQuery } from 'react-query';
-import { Forum } from '@mui/icons-material';
+import { useInfiniteQuery } from 'react-query';
+import { Forum, Search as SearchIcon, Clear as ClearIcon } from '@mui/icons-material';
 import { Link } from 'react-router-dom';
 import { chatActions } from '@/api/actions';
 import ChatCard from '@/Components/Social/ChatCard.jsx';
+
+// Custom debounce hook
+const useDebounce = (value, delay) => {
+    const [debouncedValue, setDebouncedValue] = useState(value);
+
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedValue(value);
+        }, delay);
+
+        return () => {
+            clearTimeout(handler);
+        };
+    }, [value, delay]);
+
+    return debouncedValue;
+};
+
+// Separate StarryBackground component
+const StarryBackground = memo(() => {
+    // Generate particle properties once on mount
+    const particles = useRef(
+        [...Array(20)].map(() => ({
+            width: `${Math.random() * 3 + 1}px`,
+            height: `${Math.random() * 3 + 1}px`,
+            left: `${Math.random() * 100}%`,
+            top: `${Math.random() * 100}%`,
+            duration: Math.random() * 3 + 2,
+            delay: Math.random() * 5,
+        }))
+    ).current;
+
+    return (
+        <>
+            {particles.map((particle, i) => (
+                <motion.div
+                    key={i}
+                    style={{
+                        position: 'absolute',
+                        backgroundColor: '#fff',
+                        borderRadius: '50%',
+                        width: particle.width,
+                        height: particle.height,
+                        left: particle.left,
+                        top: particle.top,
+                        opacity: 0,
+                    }}
+                    animate={{
+                        opacity: [0, 0.8, 0],
+                        scale: [1, 1.5, 1],
+                    }}
+                    transition={{
+                        duration: particle.duration,
+                        repeat: Infinity,
+                        repeatType: 'reverse',
+                        delay: particle.delay,
+                    }}
+                />
+            ))}
+        </>
+    );
+});
+
+// Ensure StarryBackground doesn't re-render unnecessarily
+StarryBackground.displayName = 'StarryBackground';
 
 const SkeletonChatCard = () => {
     const theme = useTheme();
@@ -225,7 +294,7 @@ const EmptyChatsPlaceholder = ({ isError = false, error }) => {
                     transition={{ duration: 0.5, delay: 0.8 }}
                 >
                     <Typography
-                        variant="caption"
+                        variant="State"
                         sx={{
                             display: 'block',
                             mt: 4,
@@ -238,46 +307,83 @@ const EmptyChatsPlaceholder = ({ isError = false, error }) => {
                 </motion.div>
             </Box>
 
-            {[...Array(20)].map((_, i) => (
-                <motion.div
-                    key={i}
-                    style={{
-                        position: 'absolute',
-                        backgroundColor: '#fff',
-                        borderRadius: '50%',
-                        width: `${Math.random() * 3 + 1}px`,
-                        height: `${Math.random() * 3 + 1}px`,
-                        left: `${Math.random() * 100}%`,
-                        top: `${Math.random() * 100}%`,
-                        opacity: 0,
-                    }}
-                    animate={{
-                        opacity: [0, 0.8, 0],
-                        scale: [1, 1.5, 1],
-                    }}
-                    transition={{
-                        duration: Math.random() * 3 + 2,
-                        repeat: Infinity,
-                        repeatType: 'reverse',
-                        delay: Math.random() * 5,
-                    }}
-                />
-            ))}
+            <StarryBackground />
         </Box>
     );
 };
 
+const fetchChats = async ({ pageParam = null, queryKey }) => {
+    const [, username] = queryKey;
+    const params = username ? { 'filter[userTwo.username]': username } : {};
+
+    const response = pageParam
+        ? await window.axios.get(pageParam)
+        : await chatActions.getChats(params);
+
+    return {
+        chats: response.data.data,
+        nextCursor: response.data.next_cursor,
+        nextPageUrl: response.data.next_page_url,
+        hasMore: !!response.data.next_page_url,
+        totalChats: response.data.data.length,
+    };
+};
+
 const ChatsPage = () => {
+    const observer = useRef();
+    const loadingRef = useRef(false);
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+    const [searchTerm, setSearchTerm] = useState('');
+    const debouncedSearchTerm = useDebounce(searchTerm, 300);
+
     const {
-        data: chats = [],
-        isLoading,
+        data,
+        fetchNextPage,
+        hasNextPage,
+        isFetchingNextPage,
+        isFetching,
         isError,
         error,
-    } = useQuery('chats', () => chatActions.getChats().then(res => res.data.data), {
-        staleTime: 0,
-        retry: false,
-        refetchOnWindowFocus: false
-    });
+    } = useInfiniteQuery(
+        ['chats', debouncedSearchTerm],
+        fetchChats,
+        {
+            getNextPageParam: (lastPage) => lastPage.nextPageUrl || undefined,
+            refetchOnWindowFocus: false,
+            staleTime: 0,
+            retry: 2,
+        }
+    );
+
+    const lastChatRef = useCallback(
+        (node) => {
+            if (isFetchingNextPage || loadingRef.current) return;
+            if (observer.current) observer.current.disconnect();
+
+            observer.current = new IntersectionObserver((entries) => {
+                if (entries[0].isIntersecting && hasNextPage) {
+                    loadingRef.current = true;
+                    fetchNextPage().finally(() => {
+                        loadingRef.current = false;
+                    });
+                }
+            });
+
+            if (node) observer.current.observe(node);
+        },
+        [isFetchingNextPage, hasNextPage, fetchNextPage]
+    );
+
+    const chats = data?.pages?.flatMap((page) => page.chats) || [];
+
+    const handleSearchChange = (event) => {
+        setSearchTerm(event.target.value);
+    };
+
+    const handleResetFilter = () => {
+        setSearchTerm('');
+    };
 
     return (
         <Box
@@ -285,10 +391,83 @@ const ChatsPage = () => {
                 minHeight: '100vh',
                 color: '#e0e0e0',
                 bgcolor: 'transparent',
+                position: 'relative',
+                overflow: 'hidden',
             }}
         >
-            {isLoading ? (
-                <Container maxWidth="xl" sx={{ py: { xs: 2, sm: 3 } }}>
+            <StarryBackground />
+            <Container maxWidth="xl" sx={{ py: { xs: 2, sm: 3 } }}>
+                {/* Search Input */}
+                <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5 }}
+                >
+                    <Box
+                        sx={{
+                            maxWidth: { xs: '100%', sm: 600 },
+                            mx: 'auto',
+                            mb: 2,
+                            display: 'flex',
+                            justifyContent: 'flex-end',
+                        }}
+                    >
+                        <TextField
+                            value={searchTerm}
+                            onChange={handleSearchChange}
+                            placeholder="Пошук за користувачем..."
+                            variant="outlined"
+                            size="small"
+                            sx={{
+                                width: 250,
+                                '& .MuiOutlinedInput-root': {
+                                    backgroundColor: 'rgba(10, 10, 15, 0.7)',
+                                    color: '#e0e0e0',
+                                    borderRadius: '8px',
+                                    '& fieldset': {
+                                        borderColor: 'rgba(156, 39, 176, 0.5)',
+                                    },
+                                    '&:hover fieldset': {
+                                        borderColor: '#9c27b0',
+                                    },
+                                    '&.Mui-focused fieldset': {
+                                        borderColor: '#9c27b0',
+                                    },
+                                },
+                                '& .MuiInputBase-input': {
+                                    fontSize: isMobile ? '0.75rem' : '0.8rem',
+                                    padding: '6px 10px',
+                                },
+                                '& .MuiInputLabel-root': {
+                                    color: '#b0b0b0',
+                                    fontSize: isMobile ? '0.75rem' : '0.8rem',
+                                },
+                            }}
+                            InputProps={{
+                                startAdornment: (
+                                    <InputAdornment position="start">
+                                        <SearchIcon sx={{ color: '#9c27b0', fontSize: isMobile ? 18 : 20 }} />
+                                    </InputAdornment>
+                                ),
+                                endAdornment: searchTerm && (
+                                    <InputAdornment position="end">
+                                        <ClearIcon
+                                            sx={{
+                                                color: '#b0b0b0',
+                                                cursor: 'pointer',
+                                                fontSize: isMobile ? 18 : 20,
+                                                '&:hover': { color: '#9c27b0' },
+                                            }}
+                                            onClick={handleResetFilter}
+                                        />
+                                    </InputAdornment>
+                                ),
+                            }}
+                        />
+                    </Box>
+                </motion.div>
+
+                {isFetching ? (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -308,11 +487,39 @@ const ChatsPage = () => {
                             ))}
                         </Box>
                     </motion.div>
-                </Container>
-            ) : isError || chats.length === 0 ? (
-                <EmptyChatsPlaceholder isError={isError} error={error} />
-            ) : (
-                <Container maxWidth="xl" sx={{ py: { xs: 2, sm: 3 } }}>
+                ) : isError ? (
+                    <EmptyChatsPlaceholder isError={isError} error={error} />
+                ) : chats.length === 0 ? (
+                    searchTerm ? (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ duration: 0.5 }}
+                        >
+                            <Box
+                                sx={{
+                                    maxWidth: { xs: '100%', sm: 600 },
+                                    mx: 'auto',
+                                    textAlign: 'center',
+                                    py: 3,
+                                }}
+                            >
+                                <Typography
+                                    variant={isMobile ? 'body1' : 'h6'}
+                                    sx={{
+                                        color: '#b0b0b0',
+                                        fontWeight: 500,
+                                        lineHeight: 1.6,
+                                    }}
+                                >
+                                    Чатів не знайдено
+                                </Typography>
+                            </Box>
+                        </motion.div>
+                    ) : (
+                        <EmptyChatsPlaceholder isError={isError} error={error} />
+                    )
+                ) : (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -327,13 +534,33 @@ const ChatsPage = () => {
                                 mx: 'auto',
                             }}
                         >
-                            {chats.map((chat) => (
-                                <ChatCard key={chat.id} chat={chat} />
+                            {chats.map((chat, index) => (
+                                <div
+                                    key={chat.id}
+                                    ref={index === chats.length - 1 ? lastChatRef : null}
+                                >
+                                    <ChatCard chat={chat} />
+                                </div>
                             ))}
                         </Box>
                     </motion.div>
-                </Container>
-            )}
+                )}
+                {isFetchingNextPage && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                    >
+                        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3, mb: 6 }}>
+                            <CircularProgress
+                                size={40}
+                                thickness={4}
+                                sx={{ color: '#9c27b0' }}
+                            />
+                        </Box>
+                    </motion.div>
+                )}
+            </Container>
         </Box>
     );
 };

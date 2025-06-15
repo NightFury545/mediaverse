@@ -102,7 +102,13 @@ class User extends Authenticatable implements MustVerifyEmail, JWTSubject, Filam
     public function friends()
     {
         return $this->belongsToMany(User::class, 'friendships', 'user_id', 'friend_id')
-            ->wherePivot('status', 'accepted');
+            ->wherePivot('status', 'accepted')
+            ->select('users.*', 'friendships.id as pivot_friendship_id', 'friendships.user_id as pivot_user_id', 'friendships.friend_id as pivot_friend_id')
+            ->union(
+                $this->belongsToMany(User::class, 'friendships', 'friend_id', 'user_id')
+                    ->wherePivot('status', 'accepted')
+                    ->select('users.*', 'friendships.id as pivot_friendship_id', 'friendships.user_id as pivot_user_id', 'friendships.friend_id as pivot_friend_id')
+            );
     }
 
     public function sentFriendRequests(): HasMany

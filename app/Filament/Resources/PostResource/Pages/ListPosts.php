@@ -31,20 +31,20 @@ class ListPosts extends ListRecords
         return $table
             ->columns([
                 TextColumn::make('title')
-                    ->label('Title')
+                    ->label('Назва')
                     ->searchable(),
                 TextColumn::make('user.username')
-                    ->label('Author'),
+                    ->label('Автор'),
                 ImageColumn::make('attachments')
                     ->disk(fn($record) => $record->visibility === 'public' ? 'public' : 'private')
                     ->visibility(fn($record) => $record->visibility === 'public' ? 'public' : 'private')
-                    ->label('Attachments'),
+                    ->label('Вкладення'),
                 TextColumn::make('visibility')
-                    ->label('Visibility'),
+                    ->label('Видимість'),
                 TextColumn::make('created_at')
-                    ->label('Created at'),
+                    ->label('Дата створення'),
                 TextColumn::make('updated_at')
-                    ->label('Updated at'),
+                    ->label('Дата оновлення'),
             ])
             ->actions([
                 EditAction::make(),

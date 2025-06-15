@@ -5,10 +5,10 @@ namespace App\Actions\Social\UserBlockActions;
 use App\Actions\Filters\RangeFilter;
 use App\Models\User;
 use App\Models\UserBlock;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Spatie\QueryBuilder\QueryBuilder;
 use Spatie\QueryBuilder\AllowedFilter;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Exception;
 
 class GetBlockedUsersAction
@@ -16,10 +16,10 @@ class GetBlockedUsersAction
     /**
      * Повертає список заблокованих користувачів поточного користувача з фільтрацією, сортуванням та пагінацією.
      *
-     * @return LengthAwarePaginator
+     * @return Collection
      * @throws Exception
      */
-    public function __invoke(int $perPage = 20): LengthAwarePaginator
+    public function __invoke(): Collection
     {
         try {
             /** @var User $user */
@@ -34,8 +34,7 @@ class GetBlockedUsersAction
                     AllowedFilter::custom('created_at', new RangeFilter()),
                 ])
                 ->allowedSorts(['created_at'])
-                ->paginate($perPage)
-                ->withQueryString();
+                ->get();
         } catch (Exception $e) {
             throw new Exception('Сталася помилка при завантаженні списку заблокованих користувачів.');
         }

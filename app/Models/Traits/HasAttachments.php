@@ -18,11 +18,12 @@ trait HasAttachments
             }
         });
 
-        static::updating(function ($model) {
+        /*static::updating(function ($model) {
             if ($model->isDirty('visibility')) {
                 $oldVisibility = $model->getOriginal('visibility');
                 $newVisibility = $model->visibility->value;
-
+                logger($oldVisibility);
+                logger($newVisibility);
                 if ($oldVisibility !== $newVisibility && !empty($model->attachments)) {
                     foreach ((array) $model->attachments as $file) {
                         $oldDisk = $oldVisibility === 'public' ? 'public' : 'private';
@@ -34,7 +35,7 @@ trait HasAttachments
                     }
                 }
             }
-        });
+        });*/
     }
 }
 

@@ -26,15 +26,15 @@ class ListChats extends ListRecords
         return $table
             ->columns([
                 TextColumn::make('userOne.username')
-                    ->label('User One')
+                    ->label('Перший користувач')
                     ->sortable(),
                 TextColumn::make('userTwo.username')
-                    ->label('User Two')
+                    ->label('Другий користувач')
                     ->sortable(),
                 TextColumn::make('last_message')
-                    ->label('Last Message'),
+                    ->label('Останнє повідомлення'),
                 TextColumn::make('last_message_at')
-                    ->label('Last Message At')
+                    ->label('Дата останнього повідомлення')
                     ->dateTime(),
             ])
             ->actions([

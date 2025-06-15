@@ -13,6 +13,7 @@ use App\Models\Friendship;
 use App\Models\User;
 use Exception;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Collection;
 
 class FriendshipService
 {
@@ -81,9 +82,9 @@ class FriendshipService
     /**
      * Отримання списку друзів.
      */
-    public function getFriends(User $user, $perPage = 20): LengthAwarePaginator
+    public function getFriends(User $user): Collection
     {
-        return ($this->getFriendsAction)($user, $perPage);
+        return ($this->getFriendsAction)($user);
     }
 
     /**

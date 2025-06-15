@@ -13,11 +13,10 @@ import {
     MoreVert
 } from '@mui/icons-material';
 import { useIsUserOnline } from "@/Components/Social/OnlineUsersProvider.jsx";
-import {useNavigate} from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 const UserCard = ({ user, sx, onClick }) => {
     const isOnline = useIsUserOnline(user.id);
-
     const navigate = useNavigate();
 
     if (!user) {
@@ -154,6 +153,9 @@ const UserCard = ({ user, sx, onClick }) => {
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: 1,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
                             }}
                         >
                             {fullName}
@@ -172,7 +174,11 @@ const UserCard = ({ user, sx, onClick }) => {
                                 color: '#e0e0e0',
                                 fontSize: '0.75rem',
                                 height: 20,
-                                ml: 'auto'
+                                ml: 'auto',
+                                maxWidth: '150px',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
                             }}
                         />
                     </Box>
@@ -238,9 +244,7 @@ const UserCard = ({ user, sx, onClick }) => {
                                     marginTop: 0,
                                 }
                             }}
-                        >
-
-                        </Typography>
+                        />
                     ) : (
                         <Typography
                             variant="body2"
@@ -266,7 +270,11 @@ const UserCard = ({ user, sx, onClick }) => {
                                     sx={{
                                         bgcolor: 'rgba(30, 136, 229, 0.1)',
                                         color: '#e0e0e0',
-                                        fontSize: '0.7rem'
+                                        fontSize: '0.7rem',
+                                        maxWidth: '150px',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap',
                                     }}
                                 />
                             </Tooltip>
@@ -281,7 +289,11 @@ const UserCard = ({ user, sx, onClick }) => {
                                     sx={{
                                         bgcolor: 'rgba(156, 39, 176, 0.1)',
                                         color: '#e0e0e0',
-                                        fontSize: '0.7rem'
+                                        fontSize: '0.7rem',
+                                        maxWidth: '150px',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap',
                                     }}
                                 />
                             </Tooltip>
@@ -296,7 +308,11 @@ const UserCard = ({ user, sx, onClick }) => {
                                     sx={{
                                         bgcolor: 'rgba(255, 152, 0, 0.1)',
                                         color: '#e0e0e0',
-                                        fontSize: '0.7rem'
+                                        fontSize: '0.7rem',
+                                        maxWidth: '150px',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap',
                                     }}
                                 />
                             </Tooltip>
@@ -312,9 +328,10 @@ const UserCard = ({ user, sx, onClick }) => {
                                         bgcolor: 'rgba(0, 150, 136, 0.1)',
                                         color: '#e0e0e0',
                                         fontSize: '0.7rem',
-                                        maxWidth: 150,
+                                        maxWidth: '150px',
                                         overflow: 'hidden',
-                                        textOverflow: 'ellipsis'
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap',
                                     }}
                                 />
                             </Tooltip>

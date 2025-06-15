@@ -27,24 +27,24 @@ class ListComments extends ListRecords
         return $table
             ->columns([
                 TextColumn::make('content')
-                    ->label('Content')
+                    ->label('Контент')
                     ->searchable(),
 
                 TextColumn::make('user.username')
-                    ->label('Author')
+                    ->label('Автор')
                     ->sortable(),
 
                 TextColumn::make('likes_count')
-                    ->label('Likes')
+                    ->label('Кількість лайків')
                     ->sortable(),
 
                 TextColumn::make('created_at')
-                    ->label('Created At')
+                    ->label('Дата створення')
                     ->sortable()
                     ->dateTime(),
 
                 TextColumn::make('updated_at')
-                    ->label('Updated At')
+                    ->label('Дата оновлення')
                     ->sortable()
                     ->dateTime(),
             ])

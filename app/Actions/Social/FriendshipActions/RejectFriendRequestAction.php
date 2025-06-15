@@ -30,7 +30,7 @@ class RejectFriendRequestAction
             $rejector = Auth::user();
             $sender = $friendship->getFriendOf($rejector);
 
-            $friendship->update(['status' => FriendshipStatus::REJECTED->value]);
+            $friendship->delete();
 
             $this->sendFriendRequestRejectedNotificationIfEnabled($rejector, $sender);
 

@@ -24,10 +24,10 @@ class ListLikes extends ListRecords
         return $table
             ->columns([
                 TextColumn::make('id')->label('ID')->sortable(),
-                TextColumn::make('user.username')->label('User')->sortable()->searchable(),
-                TextColumn::make('likeable_type')->label('Liked Type')->sortable(),
-                TextColumn::make('likeable_id')->label('Liked ID')->sortable(),
-                TextColumn::make('created_at')->label('Created')->dateTime()->sortable(),
+                TextColumn::make('user.username')->label('Користувач')->sortable()->searchable(),
+                TextColumn::make('likeable_type')->label('Лайкнута сутність')->sortable(),
+                TextColumn::make('likeable_id')->label('ID лайкнутої сутності')->sortable(),
+                TextColumn::make('created_at')->label('Дата створення')->dateTime()->sortable(),
             ])
             ->filters([]);
     }

@@ -4,7 +4,6 @@ namespace App\Http\Requests\Social\MessageRequests;
 
 use App\Enums\FileExtension;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class UpdateMessageRequest extends FormRequest
 {
@@ -15,10 +14,21 @@ class UpdateMessageRequest extends FormRequest
 
     public function rules(): array
     {
+        $allowedExtensions = array_merge(
+            FileExtension::getImageExtensions(),
+            FileExtension::getVideoExtensions()
+        );
+
+        $mimes = implode(',', $allowedExtensions);
+
         return [
             'content' => 'nullable|string|max:360',
             'attachments' => 'nullable|array',
-            'attachments.*' => ['file', Rule::in(FileExtension::getAllExtensions()), 'max:20480'],
+            'attachments.*' => [
+                'file',
+                'mimes:' . $mimes,
+                'max:10240',
+            ],
             'is_read' => 'nullable|boolean',
         ];
     }

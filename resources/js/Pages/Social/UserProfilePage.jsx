@@ -1,10 +1,10 @@
-import React, {useMemo, useState} from 'react';
+import React, {useEffect, useMemo, useState} from 'react';
 import {Box, useMediaQuery, useTheme} from '@mui/material';
 import {StarBorder} from '@mui/icons-material';
 import {motion} from 'framer-motion';
 import {useInfiniteQuery, useMutation, useQuery, useQueryClient} from 'react-query';
 import {useNavigate, useParams} from 'react-router-dom';
-import {chatActions, friendshipActions, likeActions, postActions, userActions} from '@/api/actions';
+import {chatActions, friendshipActions, likeActions, postActions, userActions, userBlockActions} from '@/api/actions';
 import {useAuth} from '@/Components/Auth/AuthProvider.jsx';
 import {useIsUserOnline} from '@/Components/Social/OnlineUsersProvider.jsx';
 import ProfileLoadingPlaceholder from '@/Components/Social/ProfileLoadingPlaceholder.jsx';
@@ -35,8 +35,14 @@ const UserProfilePage = () => {
         gender: '',
         avatar: '',
     });
-
     const isOnline = useIsUserOnline(user?.id);
+
+    useEffect(() => {
+        window.scrollTo({
+            top: 0,
+            behavior: 'instant',
+        });
+    }, []);
 
     const formatLastSeen = () => {
         if (isOnline) return 'Онлайн';
@@ -50,6 +56,13 @@ const UserProfilePage = () => {
         if (diffHours < 24) return `Був(ла) ${diffHours} год. тому`;
         return `Був(ла) ${Math.floor(diffHours / 24)} дн. тому`;
     };
+
+    useEffect(() => {
+        window.scrollTo({
+            top: 0,
+            behavior: 'instant',
+        });
+    }, []);
 
     const {data: profileUser, isLoading, isError} = useQuery(
         ['user', username],
@@ -75,34 +88,37 @@ const UserProfilePage = () => {
         }
     );
 
-    const {data: friendsData} = useQuery(
+    const isOwner = isAuthenticated && user?.username === profileUser?.username;
+
+    const {data: friendsData, isLoading: isFriendsLoading} = useQuery(
         ['friends', username],
-        () => friendshipActions.getFriends(username).then((res) => res.data),
+        () => friendshipActions.getFriends(profileUser.id).then((res) => res.data),
         {
             enabled: !!profileUser,
-            retry: false,
+            retry: 1,
             refetchOnWindowFocus: false,
             select: (data) =>
                 data.map((friend) => ({
                     id: friend.id,
                     username: friend.username,
                     avatar: friend.avatar || `https://i.pravatar.cc/150?img=${friend.id}`,
-                    friendship_id: friend.friendship_id,
+                    friendship_id: friend.pivot.friendship_id,
                 })),
         }
     );
 
-    const {data: sentRequests} = useQuery(
+    const {data: sentRequests, isLoading: isSentRequestsLoading} = useQuery(
         ['sentRequests', user?.username],
-        () => friendshipActions.getSentFriendRequests(user.username).then((res) => res.data),
-        {enabled: isAuthenticated && !!user}
+        () => friendshipActions.getSentFriendRequests(user.id).then((res) => res.data.data),
+        {enabled: isAuthenticated && !!user, retry: 1, refetchOnWindowFocus: false}
     );
 
-    const {data: receivedRequests} = useQuery(
+    const {data: receivedRequests, isLoading: isReceivedRequestsLoading} = useQuery(
         ['receivedRequests', user?.username],
-        () => friendshipActions.getReceivedFriendRequests(user.username).then((res) => res.data),
-        {enabled: isAuthenticated && !!user}
+        () => friendshipActions.getReceivedFriendRequests(user.id).then((res) => res.data.data),
+        {enabled: isAuthenticated && !!user, retry: 1, refetchOnWindowFocus: false}
     );
+    const isFriendshipDataLoading = isFriendsLoading || isSentRequestsLoading || isReceivedRequestsLoading;
 
     const friendStatus = useMemo(() => {
         if (!isAuthenticated || !profileUser || user.username === profileUser.username) return 'none';
@@ -233,7 +249,49 @@ const UserProfilePage = () => {
             },
         }
     );
+    const { data: blockData, isLoading: isBlockLoading } = useQuery(
+        ['userBlocks', profileUser?.username],
+        () => userBlockActions.getUserBlocks(`filter[blocked.username]=${profileUser.username}`).then((res) => res.data),
+        {
+            enabled: isAuthenticated && !!profileUser && !isOwner,
+            retry: 1,
+            refetchOnWindowFocus: false,
+            select: (data) => data[0] || null,
+        }
+    );
+    const blockUserMutation = useMutation(
+        (payload) => userBlockActions.createUserBlock(payload),
+        {
+            onSuccess: () => {
+                queryClient.invalidateQueries(['userBlocks', profileUser.username]);
+                toast.success('Користувача заблоковано!');
+            },
+            onError: (error) => {
+                toast.error(error.response?.data?.error || 'Не вдалося заблокувати користувача');
+            },
+        }
+    );
 
+    const unblockUserMutation = useMutation(
+        (blockId) => userBlockActions.deleteUserBlock(blockId),
+        {
+            onSuccess: () => {
+                queryClient.invalidateQueries(['userBlocks', profileUser.username]);
+                toast.success('Користувача розблоковано!');
+            },
+            onError: (error) => {
+                toast.error(error.response?.data?.error || 'Не вдалося розблокувати користувача');
+            },
+        }
+    );
+
+    const handleBlockAction = () => {
+        if (blockData) {
+            unblockUserMutation.mutate(blockData.id);
+        } else {
+            blockUserMutation.mutate({ blocked_id: profileUser.id });
+        }
+    };
     const handleEditSave = () => {
         if (!editForm.username || editForm.username.length < 3 || editForm.username.length > 50) {
             toast.error('Ім\'я користувача має бути від 3 до 50 символів');
@@ -293,9 +351,12 @@ const UserProfilePage = () => {
     const sendFriendRequestMutation = useMutation(
         (payload) => friendshipActions.sendFriendRequest(payload),
         {
-            onSuccess: () => queryClient.invalidateQueries(['sentRequests', user.username]),
+            onSuccess: (response) => {
+                queryClient.invalidateQueries(['sentRequests', user.username]);
+                toast.success(response?.data?.message || 'Запит на дружбу успішно надіслано');
+            },
             onError: (error) => {
-                toast.error(`Помилка відправки запиту: ${error.response?.data?.message || 'Щось пішло не так'}`);
+                toast.error(`${error.response?.data?.error || 'Щось пішло не так'}`);
             },
         }
     );
@@ -303,12 +364,13 @@ const UserProfilePage = () => {
     const acceptFriendRequestMutation = useMutation(
         (friendshipId) => friendshipActions.acceptFriendRequest(friendshipId),
         {
-            onSuccess: () => {
+            onSuccess: (response) => {
                 queryClient.invalidateQueries(['friends', username]);
                 queryClient.invalidateQueries(['receivedRequests', user.username]);
+                toast.success(response?.data?.message || 'Запит на дружбу успішно прийнято');
             },
             onError: (error) => {
-                toast.error(`Помилка прийняття запиту: ${error.response?.data?.message || 'Щось пішло не так'}`);
+                toast.error(`${error.response?.data?.error || 'Щось пішло не так'}`);
             },
         }
     );
@@ -316,9 +378,13 @@ const UserProfilePage = () => {
     const rejectFriendRequestMutation = useMutation(
         (friendshipId) => friendshipActions.rejectFriendRequest(friendshipId),
         {
-            onSuccess: () => queryClient.invalidateQueries(['receivedRequests', user.username]),
+            onSuccess: (response) => {
+                queryClient.invalidateQueries(['friends', username]);
+                queryClient.invalidateQueries(['receivedRequests', user.username])
+                toast.success(response?.data?.message || 'Запит на дружбу успішно відхилено');
+            },
             onError: (error) => {
-                toast.error(`Помилка відхилення запиту: ${error.response?.data?.message || 'Щось пішло не так'}`);
+                toast.error(`${error.response?.data?.error || 'Щось пішло не так'}`);
             },
         }
     );
@@ -326,9 +392,13 @@ const UserProfilePage = () => {
     const cancelFriendRequestMutation = useMutation(
         (friendshipId) => friendshipActions.cancelFriendRequest(friendshipId),
         {
-            onSuccess: () => queryClient.invalidateQueries(['sentRequests', user.username]),
+            onSuccess: (response) => {
+                queryClient.invalidateQueries(['friends', username]);
+                queryClient.invalidateQueries(['sentRequests', user.username]);
+                toast.success(response?.data?.message || 'Запит на дружбу успішно скасовано');
+            },
             onError: (error) => {
-                toast.error(`Помилка скасування запиту: ${error.response?.data?.message || 'Щось пішло не так'}`);
+                toast.error(`${error.response?.data?.error || 'Щось пішло не так'}`);
             },
         }
     );
@@ -336,9 +406,13 @@ const UserProfilePage = () => {
     const removeFriendMutation = useMutation(
         (friendshipId) => friendshipActions.removeFriend(friendshipId),
         {
-            onSuccess: () => queryClient.invalidateQueries(['friends', username]),
+            onSuccess: (response) => {
+                queryClient.invalidateQueries(['friends', username]);
+                queryClient.invalidateQueries(['sentRequests', user.username]);
+                toast.success(response?.data?.message || 'Друг успішно видалений');
+            },
             onError: (error) => {
-                toast.error(`Помилка видалення друга: ${error.response?.data?.message || 'Щось пішло не так'}`);
+                toast.error(`${error.response?.data?.error || 'Щось пішло не так'}`);
             },
         }
     );
@@ -372,15 +446,15 @@ const UserProfilePage = () => {
     };
 
     const handleFriendAction = () => {
-        if (!isAuthenticated) return navigate('/login');
         if (friendStatus === 'none') {
-            sendFriendRequestMutation.mutate({friend_id: profileUser.id});
+            sendFriendRequestMutation.mutate({sender_id: user.id, receiver_id: profileUser.id});
         } else if (friendStatus.status === 'pending_sent') {
             cancelFriendRequestMutation.mutate(friendStatus.friendshipId);
         } else if (friendStatus.status === 'pending_received') {
             acceptFriendRequestMutation.mutate(friendStatus.friendshipId);
         } else if (friendStatus === 'accepted') {
             const friendship = friendsData.find((friend) => friend.id === user.id);
+            console.log(friendship);
             if (friendship?.friendship_id) {
                 removeFriendMutation.mutate(friendship.friendship_id);
             }
@@ -400,8 +474,6 @@ const UserProfilePage = () => {
     if (isError) {
         return <UserNotFound/>;
     }
-
-    const isOwner = isAuthenticated && user?.username === profileUser?.username;
 
     return (
         <Box
@@ -460,6 +532,7 @@ const UserProfilePage = () => {
                         profileUser={profileUser}
                         isOwner={isOwner}
                         isAuthenticated={isAuthenticated}
+                        isFriendshipDataLoading={isFriendshipDataLoading}
                         friendStatus={friendStatus}
                         handleMessage={handleCreateChat}
                         handleFriendAction={handleFriendAction}
@@ -469,6 +542,16 @@ const UserProfilePage = () => {
                         isOnline={isOnline}
                         formatLastSeen={formatLastSeen}
                         isCreatingChat={createChatMutation.isLoading}
+                        isSendingFriendRequest={sendFriendRequestMutation.isLoading}
+                        isAcceptingFriendRequest={acceptFriendRequestMutation.isLoading}
+                        isRejectingFriendRequest={rejectFriendRequestMutation.isLoading}
+                        isCancelingFriendRequest={cancelFriendRequestMutation.isLoading}
+                        isRemovingFriend={removeFriendMutation.isLoading}
+                        blockData={blockData}
+                        isBlockLoading={isBlockLoading}
+                        handleBlockAction={handleBlockAction}
+                        isBlocking={blockUserMutation.isLoading}
+                        isUnblocking={unblockUserMutation.isLoading}
                     />
                     <ProfileInfo profileUser={profileUser} isMobile={isMobile}/>
                     <ProfileTabs

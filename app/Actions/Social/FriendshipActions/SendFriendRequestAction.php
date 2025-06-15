@@ -7,6 +7,7 @@ use App\Enums\FriendshipStatus;
 use App\Enums\NotificationType;
 use App\Models\Friendship;
 use App\Models\User;
+use App\Notifications\Social\Friendship\FriendRequestReceivedNotification;
 use App\Notifications\Social\Friendship\FriendRequestSentNotification;
 use Exception;
 use Illuminate\Support\Facades\Auth;
@@ -36,6 +37,7 @@ class SendFriendRequestAction
             $friendship = $this->createFriendRequest($sender, $receiver);
 
             $this->sendFriendRequestNotificationIfEnabled($sender, $receiver);
+            $this->sendFriendRequestReceivedNotificationIfEnabled($sender, $receiver);
 
             DB::commit();
 
@@ -117,7 +119,7 @@ class SendFriendRequestAction
      */
     private function validateReceiverAllowsRequests(User $receiver): void
     {
-        if ($receiver->settings->friend_request_privacy === FriendRequestPrivacy::NO_ONE) {
+        if ($receiver->settings->friend_request_privacy === FriendRequestPrivacy::NO_ONE->value) {
             throw new Exception('Користувач не приймає заявки в друзі.');
         }
     }
@@ -148,6 +150,19 @@ class SendFriendRequestAction
     {
         if ($sender->settings->getNotificationEnabled(NotificationType::FRIEND_REQUEST)) {
             $sender->notify(new FriendRequestSentNotification($sender, $receiver));
+        }
+    }
+
+    /**
+     * Перевіряє, чи увімкнено сповіщення для отримання запитів на дружбу та надсилає його.
+     *
+     * @param User $sender Відправник запиту.
+     * @param User $receiver Отримувач запиту.
+     */
+    private function sendFriendRequestReceivedNotificationIfEnabled(User $sender, User $receiver): void
+    {
+        if ($receiver->settings->getNotificationEnabled(NotificationType::FRIEND_REQUEST)) {
+            $receiver->notify(new FriendRequestReceivedNotification($sender, $receiver));
         }
     }
 }

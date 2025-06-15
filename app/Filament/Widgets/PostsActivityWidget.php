@@ -8,7 +8,7 @@ use Carbon\Carbon;
 
 class PostsActivityWidget extends ChartWidget
 {
-    protected static ?string $heading = 'Posts activity';
+    protected static ?string $heading = 'Активність публікацій';
 
     protected function getData(): array
     {
@@ -24,7 +24,7 @@ class PostsActivityWidget extends ChartWidget
             'labels' => $dates->toArray(),
             'datasets' => [
                 [
-                    'label' => 'Posts amount',
+                    'label' => 'Кількість публікацій',
                     'data' => $postsData->toArray(),
                     'borderColor' => '#36A2EB',
                     'backgroundColor' => 'rgba(54, 162, 235, 0.2)',

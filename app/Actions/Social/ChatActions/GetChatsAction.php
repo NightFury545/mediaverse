@@ -7,6 +7,7 @@ use Exception;
 use Illuminate\Contracts\Pagination\CursorPaginator;
 use Spatie\QueryBuilder\QueryBuilder;
 use Spatie\QueryBuilder\AllowedFilter;
+use Illuminate\Database\Eloquent\Builder;
 
 class GetChatsAction
 {
@@ -76,7 +77,19 @@ class GetChatsAction
     private function applyFilters(QueryBuilder $query): void
     {
         $query->allowedFilters([
-            AllowedFilter::partial('user_two.username'),
+            AllowedFilter::callback('userTwo.username', function (Builder $query, $value) {
+                $query->where(function (Builder $query) use ($value) {
+                    $query->whereHas('userOne', function (Builder $subQuery) use ($value) {
+                        $subQuery->where('username', 'LIKE', '%' . $value . '%')
+                            ->orWhere('first_name', 'LIKE', '%' . $value . '%')
+                            ->orWhere('last_name', 'LIKE', '%' . $value . '%');
+                    })->orWhereHas('userTwo', function (Builder $subQuery) use ($value) {
+                        $subQuery->where('username', 'LIKE', '%' . $value . '%')
+                            ->orWhere('first_name', 'LIKE', '%' . $value . '%')
+                            ->orWhere('last_name', 'LIKE', '%' . $value . '%');
+                    });
+                });
+            }),
         ]);
     }
 }

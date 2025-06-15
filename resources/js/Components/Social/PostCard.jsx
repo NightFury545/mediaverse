@@ -115,16 +115,24 @@ const PostCard = ({
                         newLoaded[index] = true;
                         return newLoaded;
                     });
+                    setMediaErrors(prev => {
+                        const newErrors = [...prev];
+                        newErrors[index] = false;
+                        return newErrors;
+                    });
                 } catch (error) {
-                    console.error(`Помилка завантаження ${item.url}:`, error);
                     const errorMessage = error.response?.data?.error || 'Не вдалося завантажити медіа';
                     setMediaErrors(prev => {
                         const newErrors = [...prev];
                         newErrors[index] = true;
                         return newErrors;
                     });
-                    if (error.response?.status === 401 || error.response?.status === 403) {
-                        toast.error('Немає доступу до медіа. Увійдіть або перевірте права.');
+                    if (error.response?.status === 401 || error.message === 'No token found') {
+                        toast.error('Немає доступу до медіа. Увійдіть знову.');
+                    } else if (error.response?.status === 403) {
+                        toast.error('Немає доступу до файлу.');
+                    } else {
+                        toast.error(errorMessage);
                     }
                 }
             }
@@ -153,11 +161,10 @@ const PostCard = ({
     };
 
     const createReportMutation = useMutation(
-        () => reportActions.createReport({ post_id: post.id, reason: reportReason }).then(res => res.data),
+        reportActions.createReport,
         {
-            onSuccess: () => {
-                toast.success('Скарга надіслана!');
-                handleReportDialogClose();
+            onSuccess: (response) => {
+                toast.success(response?.data?.message || 'Скарга надіслана!');
             },
             onError: (error) => {
                 toast.error(error.response?.data?.error || 'Не вдалося надіслати скаргу. Спробуйте пізніше.');
@@ -171,7 +178,7 @@ const PostCard = ({
             toast.error('Будь ласка, виберіть причину скарги.');
             return;
         }
-        createReportMutation.mutate();
+        createReportMutation.mutate({ post_id: post.id, reason: reportReason });
     };
 
     const handleMenuOpen = (event) => {

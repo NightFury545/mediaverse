@@ -180,7 +180,7 @@ const AuthModal = ({open, handleClose, isSignUp = false}) => {
                                 <Grow in={open} timeout={800}>
                                     <Box
                                         sx={{
-                                            backgroundImage: 'url("/storage/images/signIn-background.webp")',
+                                            backgroundImage: 'url("https://i.pinimg.com/736x/2a/40/ae/2a40aed937ae205bf827aa5cbf64a2b0.jpg")',
                                             backgroundSize: "cover",
                                             backgroundPosition: "center",
                                             borderRadius: 2,

@@ -18,38 +18,39 @@ class MessageResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-envelope';
 
-    protected static ?string $navigationGroup = 'Social';
+    protected static ?string $navigationGroup = 'Соціальна мережа';
+    protected static ?string $navigationLabel = 'Повідомлення';
 
     public static function form(Forms\Form $form): Forms\Form
     {
         return $form
             ->schema([
                 Select::make('chat_id')
-                    ->label('Chat')
+                    ->label('Чат')
                     ->options(function () {
                         return Chat::all()->pluck('id', 'id');
                     })
                     ->required(),
 
                 Select::make('user_id')
-                    ->label('User')
+                    ->label('Користувач')
                     ->options(function () {
                         return User::all()->pluck('username', 'id');
                     })
                     ->required(),
 
                 Textarea::make('content')
-                    ->label('Message Content')
+                    ->label('Повідомлення')
                     ->required(),
 
                 FileUpload::make('attachments')
-                    ->label('Attachments')
+                    ->label('Вкладення')
                     ->multiple()
                     ->disk('private')
                     ->directory('attachments'),
 
                 Checkbox::make('is_read')
-                    ->label('Is Read')
+                    ->label('Чи прочитано')
                     ->default(false),
             ]);
     }

@@ -22,20 +22,25 @@ class PostResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-document-text';
 
-    protected static ?string $navigationGroup = 'Social';
+    protected static ?string $navigationGroup = 'Соціальна мережа';
+    protected static ?string $navigationLabel = 'Пости';
     public static function form(Forms\Form $form): Forms\Form
     {
         return $form
             ->schema([
                 TextInput::make('title')
+                    ->label('Назва')
                     ->required()
                     ->maxLength(255),
                 Textarea::make('content')
+                    ->label('Контент')
                     ->required(),
                 Select::make('user_id')
+                    ->label('Користувач')
                     ->relationship('user', 'username')
                     ->required(),
                 FileUpload::make('attachments')
+                    ->label('Вкладення')
                     ->multiple()
                     ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/gif', 'video/mp4'])
                     ->maxSize(51200)
@@ -45,9 +50,10 @@ class PostResource extends Resource
                     ->disk(fn($get) => $get('visibility') === PostVisibility::PUBLIC->value ? 'public' : 'private')
                     ->columnSpan('full'),
                 Toggle::make('comments_enabled')
-                    ->label('Comments Enabled')
+                    ->label('Коментарі ввімкнено')
                     ->default(true),
                 Select::make('visibility')
+                    ->label('Видимість')
                     ->options(
                         array_combine(PostVisibility::getValues(), PostVisibility::getValues())
                     )

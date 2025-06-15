@@ -6,8 +6,8 @@ use App\Http\Controllers\Social\FriendshipController;
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::prefix('friendships')->group(function () {
         Route::post('/send', [FriendshipController::class, 'sendFriendRequest']);
-        Route::put('/{friendship}/accept', [FriendshipController::class, 'acceptFriendRequest']);
-        Route::put('/{friendship}/reject', [FriendshipController::class, 'rejectFriendRequest']);
+        Route::post('/{friendship}/accept', [FriendshipController::class, 'acceptFriendRequest']);
+        Route::post('/{friendship}/reject', [FriendshipController::class, 'rejectFriendRequest']);
         Route::delete('/{friendship}/cancel', [FriendshipController::class, 'cancelFriendRequest']);
         Route::delete('/{friendship}/remove', [FriendshipController::class, 'removeFriend']);
 

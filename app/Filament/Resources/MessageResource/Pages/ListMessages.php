@@ -28,31 +28,18 @@ class ListMessages extends ListRecords
         return $table
             ->columns([
                 TextColumn::make('content')
-                    ->label('Message Content'),
+                    ->label('Повідомлення'),
                 TextColumn::make('user.username')
-                    ->label('User')
+                    ->label('Користувач')
                     ->sortable(),
                 BooleanColumn::make('is_read')
-                    ->label('Is Read'),
+                    ->label('Чи прочитано'),
                 TextColumn::make('created_at')
-                    ->label('Created At')
+                    ->label('Дата створення')
                     ->sortable()
                     ->dateTime(),
             ])
             ->filters([
-                SelectFilter::make('is_read')
-                    ->label('Is Read')
-                    ->options([
-                        'true' => 'Read',
-                        'false' => 'Unread',
-                    ])
-                    ->query(function ($query, $value) {
-                        if ($value === 'true') {
-                            return $query->where('is_read', true);
-                        }
-
-                        return $query->where('is_read', false);
-                    }),
             ])
             ->actions([
                 EditAction::make(),

@@ -13,14 +13,15 @@ class LikeResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-hand-thumb-up';
 
-    protected static ?string $navigationGroup = 'Social';
+    protected static ?string $navigationGroup = 'Соціальна мережа';
+    protected static ?string $navigationLabel = 'Лайки';
 
     public static function form(Forms\Form $form): Forms\Form
     {
         return $form
             ->schema([
                 Select::make('user_id')
-                    ->label('User')
+                    ->label('Користувач')
                     ->relationship('user', 'username')
                     ->searchable()
                     ->required(),

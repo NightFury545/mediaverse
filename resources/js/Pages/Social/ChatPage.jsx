@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Box, useMediaQuery, useTheme } from '@mui/material';
 import { useParams } from 'react-router-dom';
 import { useQuery } from 'react-query';
@@ -20,6 +20,54 @@ const SIZES = {
     borderRadius: { xs: 0, sm: '12px' },
     navbarHeight: { xs: '56px', sm: '64px' },
 };
+
+// StarryBackground component
+const StarryBackground = memo(() => {
+    // Generate particle properties once on mount
+    const particles = React.useRef(
+        [...Array(20)].map(() => ({
+            width: `${Math.random() * 3 + 1}px`,
+            height: `${Math.random() * 3 + 1}px`,
+            left: `${Math.random() * 100}%`,
+            top: `${Math.random() * 100}%`,
+            duration: Math.random() * 3 + 2,
+            delay: Math.random() * 5,
+        }))
+    ).current;
+
+    return (
+        <>
+            {particles.map((particle, i) => (
+                <motion.div
+                    key={i}
+                    style={{
+                        position: 'absolute',
+                        backgroundColor: '#fff',
+                        borderRadius: '50%',
+                        width: particle.width,
+                        height: particle.height,
+                        left: particle.left,
+                        top: particle.top,
+                        opacity: 0,
+                        zIndex: -1, // Ensure particles are behind content
+                    }}
+                    animate={{
+                        opacity: [0, 0.8, 0],
+                        scale: [1, 1.5, 1],
+                    }}
+                    transition={{
+                        duration: particle.duration,
+                        repeat: Infinity,
+                        repeatType: 'reverse',
+                        delay: particle.delay,
+                    }}
+                />
+            ))}
+        </>
+    );
+});
+
+StarryBackground.displayName = 'StarryBackground';
 
 const ChatPage = () => {
     const { chatId } = useParams();
@@ -56,9 +104,9 @@ const ChatPage = () => {
     }
 
     const chatUser = chatData
-        ? chatData.user_one_id === user.id
-            ? chatData.user_two
-            : chatData.user_one
+        ? chatData?.user_one_id === user?.id
+            ? chatData?.user_two
+            : chatData?.user_one
         : null;
 
     return (
@@ -69,7 +117,7 @@ const ChatPage = () => {
                 bgcolor: COLORS.background,
                 backdropFilter: 'blur(10px)',
                 position: 'relative',
-                overflow: 'visible',
+                overflow: 'hidden', // Changed to hidden to contain particles
                 display: 'flex',
                 flexDirection: 'column',
                 p: SIZES.padding,
@@ -78,6 +126,7 @@ const ChatPage = () => {
                 minHeight: '-webkit-fill-available',
             }}
         >
+            <StarryBackground />
             {/* Gradient Line (Top) */}
             <Box
                 sx={{

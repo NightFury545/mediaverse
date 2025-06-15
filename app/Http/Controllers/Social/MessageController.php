@@ -38,7 +38,7 @@ class MessageController extends Controller
             ], 201);
         } catch (Exception $e) {
             return response()->json([
-                'error' => 'Failed to create message: ' . $e->getMessage(),
+                'error' => $e->getMessage(),
             ], 500);
         }
     }

@@ -2,12 +2,12 @@
 
 namespace App\Actions\Social\FriendshipActions;
 
-use App\Models\User;
 use App\Actions\Filters\RangeFilter;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Spatie\QueryBuilder\QueryBuilder;
 use Spatie\QueryBuilder\AllowedFilter;
-use Illuminate\Pagination\LengthAwarePaginator;
+use Spatie\QueryBuilder\QueryBuilder;
 
 class GetFriendsAction
 {
@@ -15,17 +15,14 @@ class GetFriendsAction
      * Отримує список друзів користувача з фільтрацією, сортуванням та пагінацією.
      *
      * @param User $user Користувач, для якого потрібно отримати список друзів
-     * @param int $perPage Кількість елементів на сторінці для пагінації
-     * @return LengthAwarePaginator Пагінований список друзів
+     * @return Collection Пагінований список друзів
      */
-    public function __invoke(User $user, int $perPage = 20): LengthAwarePaginator
+    public function __invoke(User $user): Collection
     {
-        return $this->applyPagination(
+        return
             $this->applySorting(
                 $this->applyFilters($user->friends())
-            ),
-            $perPage
-        );
+            )->get();
     }
 
     /**
@@ -61,17 +58,5 @@ class GetFriendsAction
             'last_name',
             'birthday',
         ]);
-    }
-
-    /**
-     * Застосовує пагінацію до запиту.
-     *
-     * @param QueryBuilder $query Запит, до якого буде застосована пагінація
-     * @param int $perPage Кількість елементів на сторінці для пагінації
-     * @return LengthAwarePaginator Пагінований результат
-     */
-    private function applyPagination(QueryBuilder $query, int $perPage): LengthAwarePaginator
-    {
-        return $query->paginate($perPage);
     }
 }

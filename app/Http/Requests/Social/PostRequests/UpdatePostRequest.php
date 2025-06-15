@@ -4,14 +4,11 @@ namespace App\Http\Requests\Social\PostRequests;
 
 use App\Enums\FileExtension;
 use App\Enums\PostVisibility;
-use App\Http\Requests\Traits\ValidatesAttachments;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class UpdatePostRequest extends FormRequest
 {
-    use ValidatesAttachments;
-
     public function authorize(): bool
     {
         return true;

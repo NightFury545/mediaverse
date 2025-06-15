@@ -15,26 +15,27 @@ class FriendshipResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-user-group';
 
-    protected static ?string $navigationGroup = 'Social';
+    protected static ?string $navigationGroup = 'Соціальна мережа';
+    protected static ?string $navigationLabel = 'Друзі';
 
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
                 Select::make('user_id')
-                    ->label('User')
+                    ->label('Користувач')
                     ->options(User::pluck('username', 'id'))
                     ->searchable()
                     ->required(),
 
                 Select::make('friend_id')
-                    ->label('Friend')
+                    ->label('Друг')
                     ->options(User::pluck('username', 'id'))
                     ->searchable()
                     ->required(),
 
                 TextInput::make('status')
-                    ->label('Status')
+                    ->label('Статус')
                     ->required(),
             ]);
     }

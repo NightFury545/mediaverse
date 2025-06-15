@@ -3,14 +3,13 @@
 namespace App\Http\Controllers\Files;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Auth;
-use App\Models\Post;
 use App\Models\Chat;
 use App\Models\Message;
+use App\Models\Post;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class PrivateFilesController extends Controller
@@ -44,11 +43,11 @@ class PrivateFilesController extends Controller
         $isAdmin = $user->role === 'admin';
         $isPublic = $post->visibility === 'public';
         $isFriend = false;
-
+        logger('Is public ' . $isPublic);
         if (!$isAuthor && !$isAdmin && !$isPublic) {
             $isFriend = $user->isFriendWith($post->user_id);
         }
-
+        logger('Is friend ' . $isFriend);
         if (!$isAuthor && !$isAdmin && !$isPublic && !$isFriend) {
             return response()->json(['error' => 'Немає доступу до цього файлу'], 403);
         }
@@ -59,6 +58,8 @@ class PrivateFilesController extends Controller
 
         $fullPath = Storage::disk('private')->path($filePath);
         $mimeType = mime_content_type($fullPath);
+        logger('Mime type ' . $mimeType);
+        logger('Full path ' . $fullPath);
         return response()->file($fullPath, [
             'Content-Type' => $mimeType,
             'Cache-Control' => 'max-age=31536000',

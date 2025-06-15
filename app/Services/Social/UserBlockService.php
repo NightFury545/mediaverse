@@ -7,6 +7,7 @@ use App\Actions\Social\UserBlockActions\DeleteUserBlockAction;
 use App\Actions\Social\UserBlockActions\GetBlockedUsersAction;
 use App\Models\UserBlock;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Exception;
 
@@ -46,12 +47,11 @@ class UserBlockService
     /**
      * Повертає список заблокованих користувачів поточного користувача з пагінацією.
      *
-     * @param int $perPage
-     * @return LengthAwarePaginator
+     * @return Collection
      * @throws Exception
      */
-    public function getUserBlocks(int $perPage = 20): LengthAwarePaginator
+    public function getUserBlocks(): Collection
     {
-        return ($this->getBlockedUsersAction)($perPage);
+        return ($this->getBlockedUsersAction)();
     }
 }

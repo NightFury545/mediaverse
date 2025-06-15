@@ -139,8 +139,7 @@ class FriendshipController extends Controller
     public function getFriends(Request $request, User $user): JsonResponse
     {
         try {
-            $perPage = $request->get('perPage', 20);
-            $friends = $this->friendshipService->getFriends($user, $perPage);
+            $friends = $this->friendshipService->getFriends($user);
 
             return response()->json($friends);
         } catch (Exception $e) {

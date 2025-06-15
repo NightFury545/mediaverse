@@ -4,6 +4,7 @@ namespace App\Filament\Resources\CommentResource;
 
 use App\Models\Comment;
 use Filament\Forms;
+use Filament\Forms\Components\Select;
 use Filament\Resources\Resource;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -12,9 +13,9 @@ class CommentResource extends Resource
 {
     protected static ?string $model = Comment::class;
 
-    protected static ?string $navigationLabel = 'Comments';
+    protected static ?string $navigationLabel = 'Коментарі';
 
-    protected static ?string $navigationGroup = 'Social';
+    protected static ?string $navigationGroup = 'Соціальна мережа';
 
     protected static ?string $navigationIcon = 'heroicon-o-chat-bubble-oval-left';
 
@@ -22,25 +23,25 @@ class CommentResource extends Resource
     {
         return $form
             ->schema([
-                TextInput::make('user_id')
-                    ->label('User ID')
-                    ->required()
-                    ->numeric(),
+                Select::make('user_id')
+                    ->label('Користувач')
+                    ->relationship('user', 'username')
+                    ->required(),
 
                 Textarea::make('content')
-                    ->label('Content')
+                    ->label('Контент')
                     ->required()
                     ->rows(4),
 
                 TextInput::make('likes_count')
-                    ->label('Likes Count')
+                    ->label('Кількість лайків')
                     ->required()
                     ->numeric(),
 
-                TextInput::make('parent_id')
-                    ->label('Parent Comment ID')
-                    ->nullable()
-                    ->numeric(),
+                Select::make('parent_id')
+                    ->label('Батьківський коментар')
+                    ->relationship('parent', 'content')
+                    ->nullable(),
             ]);
     }
 

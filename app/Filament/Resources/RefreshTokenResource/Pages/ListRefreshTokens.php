@@ -25,19 +25,19 @@ class ListRefreshTokens extends ListRecords
         return $table
             ->columns([
                 TextColumn::make('user.username')
-                    ->label('User')
+                    ->label('Користувач')
                     ->sortable()
                     ->searchable(),
 
                 TextColumn::make('token')
-                    ->label('Token')
+                    ->label('Токен')
                     ->limit(20)
                     ->copyable()
                     ->sortable()
                     ->searchable(),
 
                 TextColumn::make('expires_at')
-                    ->label('Expires At')
+                    ->label('Термін придатності')
                     ->dateTime()
                     ->sortable(),
             ])

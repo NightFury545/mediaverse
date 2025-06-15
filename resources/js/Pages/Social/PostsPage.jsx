@@ -98,7 +98,7 @@ const EmptyPostsPlaceholder = () => (
         >
             <PostAdd sx={{ fontSize: 60, color: '#9c27b0', mb: 2, opacity: 0.8 }} />
             <Typography variant="h5" sx={{ mb: 2, color: '#ffffff', fontWeight: 500 }}>
-                No posts found
+                Постів не знайдено
             </Typography>
             <Typography
                 variant="body1"
@@ -145,10 +145,10 @@ const EmptyTopPostsPlaceholder = () => (
                 sx={{ fontSize: 40, color: '#9c27b0', mb: 1, opacity: 0.7 }}
             />
             <Typography variant="body1" sx={{ color: '#b0b0b0', fontStyle: 'italic' }}>
-                No trending posts yet
+                Поки що немає популярних публікацій
             </Typography>
             <Typography variant="caption" sx={{ color: '#b0b0b0', display: 'block', mt: 1 }}>
-                Popular posts will appear here
+                Популярні публікації з'являтимуться тут
             </Typography>
         </Paper>
     </motion.div>
@@ -180,7 +180,7 @@ const PostsPage = () => {
         {
             getNextPageParam: (lastPage) => lastPage.nextPageUrl || undefined,
             refetchOnWindowFocus: false,
-            staleTime: 1000 * 60,
+            staleTime: 0,
             keepPreviousData: true,
         }
     );

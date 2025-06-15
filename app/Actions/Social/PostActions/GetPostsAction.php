@@ -6,6 +6,7 @@ use App\Actions\Filters\RangeFilter;
 use App\Models\Post;
 use Exception;
 use Illuminate\Pagination\CursorPaginator;
+use Illuminate\Support\Facades\DB;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -118,6 +119,7 @@ class GetPostsAction
         $user = auth()->user();
 
         $query->where(function ($q) use ($user) {
+            // Публічні пости
             $q->where('posts.visibility', 'public');
 
             if ($user) {
@@ -125,11 +127,23 @@ class GetPostsAction
 
                 $q->orWhere(function ($subQuery) use ($user) {
                     $subQuery->where('posts.visibility', 'friends')
-                        ->whereHas('user.friends', function ($friendQuery) use ($user) {
-                            $friendQuery->where('users.id', $user->id);
+                        ->where(function ($friendCheck) use ($user) {
+                            $friendCheck->whereExists(function ($builder) use ($user) {
+                                $builder->selectRaw(1)
+                                    ->from('friendships')
+                                    ->where('status', 'accepted')
+                                    ->whereRaw('friendships.user_id = posts.user_id AND friendships.friend_id = ?', [$user->id]);
+                            })
+                                ->orWhereExists(function ($builder) use ($user) {
+                                    $builder->selectRaw(1)
+                                        ->from('friendships')
+                                        ->where('status', 'accepted')
+                                        ->whereRaw('friendships.friend_id = posts.user_id AND friendships.user_id = ?', [$user->id]);
+                                });
                         });
                 });
             }
         });
     }
+
 }

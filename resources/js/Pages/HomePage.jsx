@@ -3,8 +3,10 @@ import { Box, Typography, Card, CardContent, Grid, Container, Button, Avatar, Ch
 import { motion } from "framer-motion";
 import { FiArrowRight, FiPlay, FiMessageSquare, FiUsers, FiFilm, FiMusic, FiBook, FiHeart, FiMessageCircle, FiShare2, FiUserPlus, FiTrendingUp, FiAward, FiBarChart2, FiPieChart, FiClock, FiCalendar, FiUser, FiStar } from "react-icons/fi";
 import { BarChart, Bar, PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
+import {useNavigate} from "react-router-dom";
 
 const HomePage = () => {
+    const navigate = useNavigate();
 
     const socialFeatures = [
         {
@@ -72,7 +74,6 @@ const HomePage = () => {
         }
     ];
 
-    // Community stats
     const communityStats = [
         { value: "250K+", label: "Активних користувачів", icon: <FiTrendingUp /> },
         { value: "1.2M", label: "Щоденних повідомлень", icon: <FiMessageSquare /> },
@@ -80,7 +81,6 @@ const HomePage = () => {
         { value: "10K+", label: "Нових дописів щодня", icon: <FiAward /> }
     ];
 
-    // Content distribution data
     const contentDistribution = [
         { name: "Фільми", value: 45, color: "#ff2d55" },
         { name: "Музика", value: 30, color: "#2dffd1" },
@@ -88,7 +88,6 @@ const HomePage = () => {
         { name: "Інше", value: 10, color: "#ff9d2d" }
     ];
 
-    // Activity data
     const activityData = [
         { day: "Пн", active: 65 },
         { day: "Вт", active: 70 },
@@ -99,7 +98,6 @@ const HomePage = () => {
         { day: "Нд", active: 60 }
     ];
 
-    // User engagement data
     const engagementData = [
         { name: 'Січ', posts: 4000, comments: 2400, likes: 2400 },
         { name: 'Лют', posts: 3000, comments: 1398, likes: 2210 },
@@ -110,7 +108,6 @@ const HomePage = () => {
         { name: 'Лип', posts: 3490, comments: 4300, likes: 2100 },
     ];
 
-    // User demographics data
     const demographicsData = [
         { subject: '18-24', A: 120, B: 110, fullMark: 150 },
         { subject: '25-34', A: 98, B: 130, fullMark: 150 },
@@ -119,7 +116,6 @@ const HomePage = () => {
         { subject: '55+', A: 85, B: 90, fullMark: 150 },
     ];
 
-    // Animated border variant
     const animatedBorderVariant = {
         initial: {
             backgroundPosition: "0% 50%"
@@ -134,7 +130,6 @@ const HomePage = () => {
         }
     };
 
-    // Floating decoration elements - made more visible
     const floatingDecorations = [
         { id: 1, size: 120, top: '5%', left: '3%', opacity: 0.3, animationDuration: 25, shape: 'circle', color: "rgba(45, 170, 255, 0.3)" },
         { id: 2, size: 80, top: '15%', right: '8%', opacity: 0.25, animationDuration: 30, shape: 'triangle', color: "rgba(170, 45, 255, 0.3)" },
@@ -252,6 +247,9 @@ const HomePage = () => {
                                         component={motion.button}
                                         whileHover={{ scale: 1.05 }}
                                         whileTap={{ scale: 0.95 }}
+                                        onClick={() => {
+                                            navigate('/posts');
+                                        }}
                                         variant="contained"
                                         size="large"
                                         sx={{
@@ -1111,13 +1109,16 @@ const HomePage = () => {
                                         fontSize: { xs: "1rem", md: "1.2rem" }
                                     }}
                                 >
-                                    Станьте частиною творчої спільноти вже сьогодні
+                                    Станьте частиною творчої спільноти вже сьогодні. Шукайте друзів, створюйте чати, обговорюйте спільні теми та діліться враженнями!
                                 </Typography>
                                 <Button
                                     component={motion.button}
                                     whileHover={{ scale: 1.05 }}
                                     whileTap={{ scale: 0.95 }}
                                     variant="contained"
+                                    onClick={() => {
+                                        navigate('/users')
+                                    }}
                                     size="large"
                                     sx={{
                                         background: "linear-gradient(45deg, #ff2d55, #b82dff)",
@@ -1130,7 +1131,7 @@ const HomePage = () => {
                                     }}
                                     endIcon={<FiArrowRight />}
                                 >
-                                    Зареєструватися зараз
+                                    Знайти друзів
                                 </Button>
                             </Box>
                         </Card>

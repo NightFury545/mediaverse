@@ -18,7 +18,8 @@ class UserResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-users';
 
-    protected static ?string $navigationGroup = 'Social';
+    protected static ?string $navigationGroup = 'Соціальна мережа';
+    protected static ?string $navigationLabel = 'Користувачі';
 
     public static function form(Forms\Form $form): Forms\Form
     {
@@ -26,25 +27,31 @@ class UserResource extends Resource
             ->schema([
                 TextInput::make('username')
                     ->required()
+                    ->label('Нікнейм')
                     ->maxLength(255),
 
                 TextInput::make('first_name')
+                    ->label('Ім\'я')
                     ->maxLength(255),
 
                 TextInput::make('last_name')
+                    ->label('Прізвище')
                     ->maxLength(255),
 
                 TextInput::make('email')
                     ->email()
+                    ->label('Електронна адреса')
                     ->unique(ignoreRecord: true)
                     ->required(),
 
                 TextInput::make('password')
                     ->password()
+                    ->label('Пароль')
                     ->required(fn($context) => $context === 'create')
                     ->dehydrateStateUsing(fn($state) => Hash::make($state)),
 
                 Select::make('role')
+                    ->label('Роль')
                     ->options(
                         array_combine(Role::getValues(), Role::getValues())
                     )
@@ -52,30 +59,31 @@ class UserResource extends Resource
                     ->default(Role::USER->value),
 
                 FileUpload::make('avatar')
+                    ->label('Аватар')
                     ->image()
                     ->disk('public')
                     ->directory('avatars')
                     ->visibility('public'),
 
-                TextInput::make('phone_number')
-                    ->tel()
-                    ->maxLength(20),
-
                 Select::make('gender')
+                    ->label('Стать')
                     ->options(
                         array_combine(Gender::getValues(), Gender::getValues())
                     )
                     ->required()
                     ->default(Gender::MALE->value),
 
-                TextInput::make('address')
+                TextInput::make('country')
+                    ->label('Країна')
                     ->maxLength(255),
 
                 TextInput::make('biography')
+                    ->label('Біографія')
                     ->maxLength(500)
                     ->columnSpanFull(),
 
                 TextInput::make('birthday')
+                    ->label('День народження')
                     ->type('date'),
             ]);
     }

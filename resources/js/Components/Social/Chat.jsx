@@ -1,39 +1,50 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {
-    Box,
-    Paper,
-    Typography,
     Avatar,
+    Box,
+    Button,
     Chip,
-    IconButton,
-    useMediaQuery,
-    useTheme,
-    Popper,
-    Fade,
+    CircularProgress,
     ClickAwayListener,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    Fab,
+    Fade,
+    IconButton,
     Menu,
     MenuItem,
-    Fab,
+    Paper,
+    Popper,
     Skeleton,
-    CircularProgress,
+    TextField,
+    Typography,
+    useMediaQuery,
+    useTheme,
 } from '@mui/material';
 import {
-    Send as SendIcon,
-    FormatBold as FormatBoldIcon,
-    FormatItalic as FormatItalicIcon,
-    FormatUnderlined as FormatUnderlinedIcon,
-    FormatListBulleted as FormatListBulletedIcon,
-    FormatClear as FormatClearIcon,
-    MoreVert as MoreVertIcon,
     ArrowDownward as ArrowDownwardIcon,
+    Block as BlockIcon,
+    Close,
+    Delete as DeleteIcon,
+    FormatBold as FormatBoldIcon,
+    FormatClear as FormatClearIcon,
+    FormatItalic as FormatItalicIcon,
+    FormatListBulleted as FormatListBulletedIcon,
+    FormatUnderlined as FormatUnderlinedIcon,
+    Link as LinkIcon,
+    LockOpen as LockOpenIcon,
+    MoreVert as MoreVertIcon,
+    Send as SendIcon,
 } from '@mui/icons-material';
-import { toast } from 'react-toastify';
+import {toast} from 'react-toastify';
 import {useNavigate, useParams} from 'react-router-dom';
-import { useAuth } from '@/Components/Auth/AuthProvider.jsx';
-import { useInfiniteQuery, useMutation, useQueryClient } from 'react-query';
+import {useAuth} from '@/Components/Auth/AuthProvider.jsx';
+import {useInfiniteQuery, useMutation, useQuery, useQueryClient} from 'react-query';
 import Message from './Message';
-import { chatActions, messageActions } from '@/api/actions';
-import { motion } from 'framer-motion';
+import {chatActions, messageActions, userBlockActions} from '@/api/actions';
+import {motion} from 'framer-motion';
+import DOMPurify from 'dompurify';
 
 // Debounce utility
 const debounce = (func, wait) => {
@@ -58,30 +69,34 @@ const COLORS = {
 };
 
 const SIZES = {
-    avatarHeader: { xs: 36, sm: 40 },
+    avatarHeader: {xs: 36, sm: 40},
     avatarMessage: 32,
-    padding: { xs: '12px', sm: '16px' },
-    borderRadius: { xs: 0, sm: '3px' },
-    fontSizeHeader: { xs: '16px', sm: '18px' },
-    fontSizeMessage: { xs: '14px', sm: '15px' },
+    padding: {xs: '12px', sm: '16px'},
+    borderRadius: {xs: 0, sm: '8px'},
+    fontSizeHeader: {xs: '16px', sm: '18px'},
+    fontSizeMessage: {xs: '14px', sm: '15px'},
     chipHeight: 24,
     inputMinRows: 1,
 };
 
-const ChatComponent = ({ chatUser, isLoading }) => {
-    const { chatId } = useParams();
-    const { user } = useAuth();
+const ChatComponent = ({chatUser, isLoading}) => {
+    const {chatId} = useParams();
+    const {user} = useAuth();
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const queryClient = useQueryClient();
     const [newMessage, setNewMessage] = useState('');
     const [selection, setSelection] = useState(null);
     const [files, setFiles] = useState([]);
+    const [fileUrls, setFileUrls] = useState([]);
     const [anchorEl, setAnchorEl] = useState(null);
     const [emojiAnchorEl, setEmojiAnchorEl] = useState(null);
     const [rows, setRows] = useState(1);
     const [showScrollButton, setShowScrollButton] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
+    const [linkDialogOpen, setLinkDialogOpen] = useState(false);
+    const [linkUrl, setLinkUrl] = useState('');
+    const [isInitialLoad, setIsInitialLoad] = useState(true);
     const inputRef = useRef(null);
     const messagesEndRef = useRef(null);
     const messagesContainerRef = useRef(null);
@@ -92,11 +107,31 @@ const ChatComponent = ({ chatUser, isLoading }) => {
     const navigate = useNavigate();
 
     const emojis = [
-        '😊', '👍', '🔥', '❤️', '😂',
-        '😍', '😢', '😡', '😎', '🙌',
-        '💪', '✨', '🎉', '🥳', '😴',
-        '😺', '🐶', '🌟', '🍎', '🍕',
-        '🚀', '🌈', '🎸', '⚽', '🏀',
+        '😊',
+        '👍',
+        '🔥',
+        '❤️',
+        '😂',
+        '😍',
+        '😢',
+        '😡',
+        '😎',
+        '🙌',
+        '💪',
+        '✨',
+        '🎉',
+        '🥳',
+        '😴',
+        '😺',
+        '🐶',
+        '🌟',
+        '🍎',
+        '🍕',
+        '🚀',
+        '🌈',
+        '🎸',
+        '⚽',
+        '🏀',
     ];
 
     const {
@@ -108,8 +143,8 @@ const ChatComponent = ({ chatUser, isLoading }) => {
         error,
     } = useInfiniteQuery(
         ['messages', chatId],
-        ({ pageParam }) => {
-            return messageActions.getMessages(chatId, pageParam ? { cursor: pageParam } : '');
+        ({pageParam}) => {
+            return messageActions.getMessages(chatId, pageParam ? {cursor: pageParam} : '');
         },
         {
             getNextPageParam: (lastPage) => {
@@ -117,22 +152,39 @@ const ChatComponent = ({ chatUser, isLoading }) => {
                 return cursor ? cursor : undefined;
             },
             enabled: !!user?.id && !!chatId && !!user.email_verified_at,
+            refetchOnWindowFocus: false,
             staleTime: 1000 * 60,
             cacheTime: 1000 * 60 * 5,
             onSuccess: (data) => {
-                const allMessages = data.pages.flatMap(page => page.data.data);
-                const unreadMessages = allMessages.filter(msg => !msg.is_read && msg.user_id !== user.id);
+                const allMessages = data.pages.flatMap((page) => page.data.data);
+                const unreadMessages = allMessages.filter(
+                    (msg) => !msg.is_read && msg.user_id !== user.id,
+                );
                 setUnreadCount(unreadMessages.length);
-                scrollToBottom();
+            },
+        },
+    );
+
+    const { data: isUserBlocked, isLoading: isBlockLoading } = useQuery(
+        ['userBlock', chatUser?.username],
+        () => userBlockActions.getUserBlocks(`filter[blocked.username]=${chatUser?.username}`),
+        {
+            enabled: !!chatUser?.username,
+            refetchOnWindowFocus: false,
+            select: (data) => data.data.length > 0,
+            staleTime: 0,
+            onError: () => {
+                toast.error('Не вдалося перевірити статус блокування');
             },
         }
     );
 
     // Send message mutation
     const sendMessageMutation = useMutation(
-        (formData) => messageActions.createMessage(formData),
+        ({formData}) => messageActions.createMessage(formData),
         {
-            onMutate: async ({ content, attachments }) => {
+            onMutate: async ({messageData}) => {
+                const {content, attachments, chat_id} = messageData;
                 const tempId = `temp-${crypto.randomUUID()}`;
                 const optimisticMessage = {
                     id: tempId,
@@ -144,44 +196,56 @@ const ChatComponent = ({ chatUser, isLoading }) => {
                         first_name: user.first_name,
                         last_name: user.last_name,
                     },
-                    chat_id: chatId,
+                    chat_id,
                     user_id: user.id,
                     created_at: new Date().toISOString(),
                     is_read: false,
-                    attachments: attachments.map(file => ({
-                        url: URL.createObjectURL(file),
+                    attachments: attachments.map((file, index) => ({
+                        file,
+                        url: fileUrls[index],
                         type: file.type,
+                        temp: true,
                     })),
                     isPending: true,
                     isError: false,
                 };
 
-                pendingMessages.current.set(tempId, { content, attachments: attachments.map(file => file.name) });
+                pendingMessages.current.set(tempId, {
+                    content,
+                    attachments: attachments.map((file) => file),
+                });
 
                 await queryClient.cancelQueries(['messages', chatId]);
-                const previousMessages = queryClient.getQueryData(['messages', chatId]);
                 queryClient.setQueryData(['messages', chatId], (old) => ({
                     ...old,
-                    pages: old?.pages ? [
-                        {
-                            data: {
-                                ...old.pages[0].data,
-                                data: [...old.pages[0].data.data, optimisticMessage],
+                    pages: old?.pages
+                        ? [
+                            {
+                                data: {
+                                    ...old.pages[0].data,
+                                    data: [...old.pages[0].data.data, optimisticMessage],
+                                },
                             },
-                        },
-                        ...old.pages.slice(1),
-                    ] : [{ data: { data: [optimisticMessage], next_cursor: null } }],
+                            ...old.pages.slice(1),
+                        ]
+                        : [{data: {data: [optimisticMessage], next_cursor: null}}],
                 }));
 
                 setNewMessage('');
                 setFiles([]);
+                setFileUrls([]);
                 setRows(1);
                 if (inputRef.current) {
                     inputRef.current.innerHTML = '';
                     normalizeContentEditable();
                     moveCursorToNeutral();
                 }
-                return { previousMessages, tempId };
+
+                return {
+                    previousMessages: queryClient.getQueryData(['messages', chatId]),
+                    tempId,
+                    tempUrls: optimisticMessage.attachments.map((a) => a.url),
+                };
             },
             onSuccess: (response, variables, context) => {
                 queryClient.setQueryData(['messages', chatId], (old) => ({
@@ -191,17 +255,18 @@ const ChatComponent = ({ chatUser, isLoading }) => {
                             ? {
                                 data: {
                                     ...page.data,
-                                    data: page.data.data.map(msg =>
+                                    data: page.data.data.map((msg) =>
                                         msg.id === context.tempId
-                                            ? { ...response.data.data, isPending: false, isError: false }
-                                            : msg
+                                            ? {...response.data.data, isPending: false, isError: false}
+                                            : msg,
                                     ),
                                 },
                             }
-                            : page
+                            : page,
                     ),
                 }));
                 pendingMessages.current.delete(context.tempId);
+                context.tempUrls.forEach((url) => URL.revokeObjectURL(url));
             },
             onError: (error, variables, context) => {
                 queryClient.setQueryData(['messages', chatId], (old) => ({
@@ -211,41 +276,48 @@ const ChatComponent = ({ chatUser, isLoading }) => {
                             ? {
                                 data: {
                                     ...page.data,
-                                    data: page.data.data.map(msg =>
-                                        msg.id === context.tempId ? { ...msg, isPending: false, isError: true } : msg
+                                    data: page.data.data.map((msg) =>
+                                        msg.id === context.tempId
+                                            ? {...msg, isPending: false, isError: true}
+                                            : msg,
                                     ),
                                 },
                             }
-                            : page
+                            : page,
                     ),
                 }));
                 pendingMessages.current.delete(context.tempId);
-                toast.error(error.response?.data?.error || error.response?.data?.message || 'Не вдалося надіслати повідомлення');
+                context.tempUrls.forEach((url) => URL.revokeObjectURL(url));
+                toast.error(
+                    error.response?.data?.error ||
+                    error.response?.data?.message ||
+                    'Не вдалося надіслати повідомлення',
+                );
             },
-        }
+        },
     );
 
     // Mark messages as read
     const markMessagesAsRead = useCallback(async () => {
-        const allMessages = data?.pages.flatMap(page => page.data.data) || [];
-        const unreadMessages = allMessages.filter(msg => !msg.is_read && msg.user_id !== user.id);
+        const allMessages = data?.pages.flatMap((page) => page.data.data) || [];
+        const unreadMessages = allMessages.filter(
+            (msg) => !msg.is_read && msg.user_id !== user.id,
+        );
         if (unreadMessages.length === 0) return;
 
         try {
             await Promise.all(
-                unreadMessages.map(msg =>
-                    messageActions.updateMessage(msg.id, { is_read: true })
-                )
+                unreadMessages.map((msg) => messageActions.updateMessage(msg.id, {is_read: true})),
             );
             queryClient.setQueryData(['messages', chatId], (old) => ({
                 ...old,
-                pages: old.pages.map(page => ({
+                pages: old.pages.map((page) => ({
                     data: {
                         ...page.data,
-                        data: page.data.data.map(msg =>
-                            unreadMessages.some(unread => unread.id === msg.id)
-                                ? { ...msg, is_read: true }
-                                : msg
+                        data: page.data.data.map((msg) =>
+                            unreadMessages.some((unread) => unread.id === msg.id)
+                                ? {...msg, is_read: true}
+                                : msg,
                         ),
                     },
                 })),
@@ -257,54 +329,88 @@ const ChatComponent = ({ chatUser, isLoading }) => {
     }, [data, queryClient, chatId]);
 
     // Scroll to bottom
-    const scrollToBottom = useCallback((options = { behavior: 'smooth' }) => {
-        if (messagesEndRef.current && messagesContainerRef.current) {
-            const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
-            const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
-            if (isNearBottom || options.force) {
-                messagesEndRef.current.scrollIntoView(options);
-                setShowScrollButton(false);
-                markMessagesAsRead();
+    const scrollToBottom = useCallback(
+        (options = {behavior: 'smooth'}) => {
+            if (messagesEndRef.current && messagesContainerRef.current) {
+                const {scrollTop, scrollHeight, clientHeight} = messagesContainerRef.current;
+                const isNearBottom = scrollHeight - scrollTop - clientHeight < 200;
+                if (isNearBottom || options.force) {
+                    messagesEndRef.current.scrollIntoView(options);
+                    setShowScrollButton(false);
+                    markMessagesAsRead();
+                }
             }
-        }
-    }, [markMessagesAsRead]);
+        },
+        [markMessagesAsRead],
+    );
 
+    // Initial scroll on load
     useEffect(() => {
-        const allMessages = data?.pages.flatMap(page => page.data.data) || [];
-        if (allMessages.length > 0) {
-            scrollToBottom({ behavior: 'smooth', force: true });
+        const allMessages = data?.pages.flatMap((page) => page.data.data) || [];
+        if (allMessages.length > 0 && isInitialLoad) {
+            scrollToBottom({behavior: 'smooth', force: true});
+            setIsInitialLoad(false);
         }
-    }, [data, scrollToBottom]);
+    }, [data, scrollToBottom, isInitialLoad]);
+
+    // Reset isInitialLoad on chatId change
+    useEffect(() => {
+        setIsInitialLoad(true);
+    }, [chatId]);
 
     // Handle scroll for pagination and unread messages
-    const handleScroll = useCallback(debounce(() => {
-        if (!messagesContainerRef.current || isFetching || loadingRef.current || !hasNextPage) return;
+    const handleScroll = useCallback(
+        debounce(() => {
+            if (!messagesContainerRef.current || isFetching || loadingRef.current || !hasNextPage) return;
 
-        const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
-        const isAtBottom = scrollHeight - scrollTop - clientHeight < 100;
-        const isAtTop = scrollTop < 100;
+            const {scrollTop, scrollHeight, clientHeight} = messagesContainerRef.current;
+            const isAtBottom = scrollHeight - scrollTop - clientHeight < 200;
+            const isAtTop = scrollTop < 100;
 
-        setShowScrollButton(!isAtBottom);
-        if (isAtBottom) {
-            markMessagesAsRead();
-        }
+            console.log('handleScroll:', {scrollTop, scrollHeight, clientHeight, isAtBottom, isAtTop, hasNextPage});
 
-        if (isAtTop && hasNextPage) {
-            loadingRef.current = true;
-            const scrollHeightBefore = messagesContainerRef.current.scrollHeight;
-            const scrollTopBefore = messagesContainerRef.current.scrollTop;
+            setShowScrollButton(!isAtBottom);
+            if (isAtBottom) {
+                markMessagesAsRead();
+            }
 
-            fetchNextPage().then(() => {
-                const scrollHeightAfter = messagesContainerRef.current.scrollHeight;
-                const newScrollTop = scrollTopBefore + (scrollHeightAfter - scrollHeightBefore);
-                messagesContainerRef.current.scrollTop = newScrollTop;
-                loadingRef.current = false;
-            }).catch((error) => {
-                loadingRef.current = false;
-                toast.error('Не вдалося завантажити старіші повідомлення');
-            });
-        }
-    }, 200), [isFetching, hasNextPage, fetchNextPage, markMessagesAsRead]);
+            if (isAtTop && hasNextPage && !loadingRef.current) {
+                loadingRef.current = true;
+                // Зберігаємо ID першого видимого повідомлення
+                const messages = Array.from(
+                    messagesContainerRef.current.querySelectorAll('[id^="message-"]'),
+                );
+                const topMessage = messages.find((msg) => {
+                    const rect = msg.getBoundingClientRect();
+                    return rect.top >= messagesContainerRef.current.getBoundingClientRect().top;
+                });
+                const topMessageId = topMessage?.id;
+
+                console.log('Fetching next page, top message:', topMessageId);
+
+                fetchNextPage().then(() => {
+                    setTimeout(() => {
+                        if (topMessageId && messagesContainerRef.current) {
+                            const targetMessage = document.getElementById(topMessageId);
+                            if (targetMessage) {
+                                const offsetTop = targetMessage.offsetTop;
+                                messagesContainerRef.current.scrollTop = offsetTop;
+                                console.log('After fetch, restored scroll to:', {topMessageId, offsetTop});
+                            } else {
+                                console.warn('Target message not found:', topMessageId);
+                            }
+                        }
+                        loadingRef.current = false;
+                    }, 0);
+                }).catch((error) => {
+                    console.error('Fetch error:', error);
+                    toast.error('Не вдалося завантажити старіші повідомлення');
+                    loadingRef.current = false;
+                });
+            }
+        }, 200),
+        [isFetching, hasNextPage, fetchNextPage, markMessagesAsRead],
+    );
 
     // WebSocket for real-time messages
     useEffect(() => {
@@ -315,12 +421,12 @@ const ChatComponent = ({ chatUser, isLoading }) => {
             queryClient.setQueryData(['messages', chatId], (old) => {
                 if (!old) {
                     return {
-                        pages: [{ data: { data: [e.message], next_cursor: null } }],
+                        pages: [{data: {data: [e.message], next_cursor: null}}],
                     };
                 }
-                const allMessages = old.pages.flatMap(page => page.data.data);
+                const allMessages = old.pages.flatMap((page) => page.data.data);
 
-                const isDuplicate = allMessages.some(msg => msg.id === e.message.id);
+                const isDuplicate = allMessages.some((msg) => msg.id === e.message.id);
                 let matchedTempId = null;
                 if (!isDuplicate && e.message.user_id === user.id) {
                     for (const [tempId, pending] of pendingMessages.current) {
@@ -342,13 +448,15 @@ const ChatComponent = ({ chatUser, isLoading }) => {
                     messagesContainerRef.current &&
                     messagesContainerRef.current.scrollHeight -
                     messagesContainerRef.current.scrollTop -
-                    messagesContainerRef.current.clientHeight < 100;
+                    messagesContainerRef.current.clientHeight < 200;
 
                 if (e.message.user_id !== user.id && !e.message.is_read && isAtBottom) {
-                    messageActions.updateMessage(e.message.id, { is_read: true }).catch(error =>
-                        console.error('Failed to mark message as read:', error)
-                    );
+                    messageActions
+                        .updateMessage(e.message.id, {is_read: true})
+                        .catch((error) => console.error('Failed to mark message as read:', error));
                     e.message.is_read = true;
+                    console.log('New message, scrolling to bottom (isAtBottom)');
+                    scrollToBottom({behavior: 'smooth'});
                 }
 
                 return {
@@ -359,15 +467,15 @@ const ChatComponent = ({ chatUser, isLoading }) => {
                                 data: {
                                     ...page.data,
                                     data: matchedTempId
-                                        ? page.data.data.map(msg =>
+                                        ? page.data.data.map((msg) =>
                                             msg.id === matchedTempId
-                                                ? { ...e.message, isPending: false, isError: false }
-                                                : msg
+                                                ? {...e.message, isPending: false, isError: false}
+                                                : msg,
                                         )
                                         : [...page.data.data, e.message],
                                 },
                             }
-                            : page
+                            : page,
                     ),
                 };
             });
@@ -377,7 +485,7 @@ const ChatComponent = ({ chatUser, isLoading }) => {
             }
 
             if (e.message.user_id !== user.id && !e.message.is_read) {
-                setUnreadCount(prev => prev + 1);
+                setUnreadCount((prev) => prev + 1);
             }
         };
 
@@ -398,15 +506,28 @@ const ChatComponent = ({ chatUser, isLoading }) => {
         }
     }, [handleScroll]);
 
+    // Handle file upload
+    const handleFileUpload = (event) => {
+        const uploadedFiles = Array.from(event.target.files);
+        const newUrls = uploadedFiles.map((file) => URL.createObjectURL(file));
+        setFiles((prev) => [...prev, ...uploadedFiles]);
+        setFileUrls((prev) => [...prev, ...newUrls]);
+        moveCursorToNeutral();
+    };
+
     // Handle sending a message
     const handleSendMessage = async () => {
         if (!newMessage.trim() && files.length === 0) return;
-        const cleanedMessage = newMessage
-            .replace(/<span[^\>]*>\s*<\/span>/g, '')
-            .replace(/\u200B/g, '')
-            .replace(/<div><br><\/div>/g, '<br>')
-            .replace(/<br><br>/g, '<br>')
-            .trim();
+        const cleanedMessage = DOMPurify.sanitize(newMessage, {
+            ALLOWED_TAGS: ['b', 'i', 'u', 'ul', 'li', 'br', 'a'],
+            ALLOWED_ATTR: ['href', 'target', 'rel'],
+        }).trim();
+
+        const messageData = {
+            content: cleanedMessage,
+            attachments: files,
+            chat_id: chatId,
+        };
 
         const formData = new FormData();
         formData.append('content', cleanedMessage);
@@ -415,14 +536,12 @@ const ChatComponent = ({ chatUser, isLoading }) => {
             formData.append(`attachments[${index}]`, file);
         });
 
-        sendMessageMutation.mutate({ content: cleanedMessage, attachments: files, chat_id: chatId });
-    };
+        sendMessageMutation.mutate({formData, messageData});
+        scrollToBottom({behavior: 'smooth'});
 
-    // Handle file upload
-    const handleFileUpload = (event) => {
-        const uploadedFiles = Array.from(event.target.files);
-        setFiles(prev => [...prev, ...uploadedFiles]);
-        moveCursorToNeutral();
+        if (fileInputRef.current) {
+            fileInputRef.current.value = null;
+        }
     };
 
     // Apply style to selected text
@@ -483,7 +602,57 @@ const ChatComponent = ({ chatUser, isLoading }) => {
         }
     };
 
-    // Handle emoji selection
+    // Handle link insertion
+    const handleInsertLink = () => {
+        if (!linkUrl.trim()) {
+            toast.error('Будь ласка, введіть дійсне посилання');
+            return;
+        }
+
+        if (!linkUrl.match(/^https?:\/\/.+/)) {
+            setLinkUrl(`https://${linkUrl}`);
+        }
+
+        if (inputRef.current) {
+            inputRef.current.focus();
+            const selection = window.getSelection();
+            let range;
+            if (selection.rangeCount > 0) {
+                range = selection.getRangeAt(0);
+                range.deleteContents();
+            } else {
+                range = document.createRange();
+                range.selectNodeContents(inputRef.current);
+                range.collapse(false);
+            }
+
+            const link = document.createElement('a');
+            link.href = linkUrl;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            link.textContent = selection.toString() || linkUrl;
+
+            range.insertNode(link);
+
+            const neutralNode = document.createTextNode('');
+            range.collapse(false);
+            range.insertNode(neutralNode);
+
+            range.setStart(neutralNode, 0);
+            range.collapse(true);
+            selection.removeAllRanges();
+            selection.addRange(range);
+
+            normalizeContentEditable();
+            setNewMessage(inputRef.current.innerHTML);
+            updateRows(inputRef.current.innerHTML);
+            setLinkDialogOpen(false);
+            setLinkUrl('');
+            setSelection(null);
+        }
+    };
+
+// Handle emoji selection
     const handleEmojiSelect = (emoji) => {
         if (inputRef.current) {
             inputRef.current.focus();
@@ -516,7 +685,7 @@ const ChatComponent = ({ chatUser, isLoading }) => {
         }
     };
 
-    // Normalize DOM
+// Normalize DOM
     const normalizeContentEditable = () => {
         if (inputRef.current) {
             const walker = document.createTreeWalker(
@@ -537,24 +706,26 @@ const ChatComponent = ({ chatUser, isLoading }) => {
                         }
                         return NodeFilter.FILTER_ACCEPT;
                     },
-                }
+                },
             );
             const nodesToRemove = [];
             while (walker.nextNode()) {
                 const node = walker.currentNode;
-                if (node.nodeType === Node.ELEMENT_NODE && (node.tagName === 'SPAN' || node.tagName === 'DIV') && !node.textContent.trim()) {
+                if (
+                    node.nodeType === Node.ELEMENT_NODE &&
+                    (node.tagName === 'SPAN' || node.tagName === 'DIV') &&
+                    !node.textContent.trim()
+                ) {
                     nodesToRemove.push(node);
                 }
             }
-            nodesToRemove.forEach(node => node.remove());
+            nodesToRemove.forEach((node) => node.remove());
 
             let html = inputRef.current.innerHTML;
-            html = html
-                .replace(/<span[^>]*>\s*<\/span>/g, '')
-                .replace(/(\u200B)+/g, '')
-                .replace(/<div><br><\/div>/g, '<br>')
-                .replace(/<br><br>/g, '<br>')
-                .trim();
+            html = DOMPurify.sanitize(html, {
+                ALLOWED_TAGS: ['b', 'i', 'u', 'ul', 'li', 'br', 'a'],
+                ALLOWED_ATTR: ['href', 'target', 'rel'],
+            }).trim();
             if (!html || html === '<br>') {
                 inputRef.current.innerHTML = '';
                 setNewMessage('');
@@ -564,7 +735,7 @@ const ChatComponent = ({ chatUser, isLoading }) => {
         }
     };
 
-    // Move cursor to neutral position
+// Move cursor to neutral position
     const moveCursorToNeutral = () => {
         if (inputRef.current) {
             const selection = window.getSelection();
@@ -585,27 +756,26 @@ const ChatComponent = ({ chatUser, isLoading }) => {
         }
     };
 
-    // Clean HTML
+// Clean HTML
     const isContentEmpty = (html) => {
-        const cleanText = html
-            .replace(/<[^>]+>/g, '')
+        const cleanText = DOMPurify.sanitize(html, {
+            ALLOWED_TAGS: [],
+            ALLOWED_ATTR: [],
+        })
             .replace(/ /g, '')
-            .replace(/\u200B/g, '')
             .replace(/\s+/g, '')
             .trim();
         return cleanText.length === 0;
     };
 
-    // Handle input changes
+// Handle input changes
     const handleInput = () => {
         if (inputRef.current) {
             let html = inputRef.current.innerHTML;
-            html = html
-                .replace(/(\u200B)+/g, '')
-                .replace(/<span[^>]*>\s*<\/span>/g, '')
-                .replace(/<div><br><\/div>/g, '<br>')
-                .replace(/<br><br>/g, '<br>')
-                .trim();
+            html = DOMPurify.sanitize(html, {
+                ALLOWED_TAGS: ['b', 'i', 'u', 'ul', 'li', 'br', 'a'],
+                ALLOWED_ATTR: ['href', 'target', 'rel'],
+            }).trim();
             if (html === '<br>' || isContentEmpty(html)) {
                 html = '';
                 inputRef.current.innerHTML = '';
@@ -617,7 +787,7 @@ const ChatComponent = ({ chatUser, isLoading }) => {
         }
     };
 
-    // Handle key down
+// Handle key down
     const handleKeyDown = (event) => {
         if (event.key === 'Enter' && event.shiftKey) {
             event.preventDefault();
@@ -629,7 +799,7 @@ const ChatComponent = ({ chatUser, isLoading }) => {
         }
     };
 
-    // Handle text selection
+// Handle text selection
     const handleSelection = () => {
         const selection = window.getSelection();
         if (selection.rangeCount > 0 && selection.toString().length > 0) {
@@ -642,10 +812,7 @@ const ChatComponent = ({ chatUser, isLoading }) => {
                     top: bounds.top - containerRect.top - 40,
                     left: Math.max(
                         0,
-                        Math.min(
-                            bounds.left - containerRect.left + 10,
-                            containerRect.width - 150
-                        )
+                        Math.min(bounds.left - containerRect.left + 10, containerRect.width - 150),
                     ),
                 },
             });
@@ -654,7 +821,7 @@ const ChatComponent = ({ chatUser, isLoading }) => {
         }
     };
 
-    // Update rows
+// Update rows
     const updateRows = (html) => {
         if (inputRef.current) {
             const lineHeight = 24;
@@ -665,20 +832,21 @@ const ChatComponent = ({ chatUser, isLoading }) => {
         }
     };
 
-    // Handle click away
+// Handle click away
     const handleClickAway = () => {
         setSelection(null);
         setEmojiAnchorEl(null);
+        setLinkDialogOpen(false);
     };
 
-    // Handle menu actions
+// Handle modal interactions
     const handleMenuOpen = (event) => {
         event.stopPropagation();
         setAnchorEl(event.currentTarget);
     };
 
     const handleMenuClose = (event) => {
-        event.stopPropagation();
+        event?.stopPropagation();
         setAnchorEl(null);
     };
 
@@ -688,7 +856,7 @@ const ChatComponent = ({ chatUser, isLoading }) => {
     };
 
     const handleEmojiMenuClose = (event) => {
-        event.stopPropagation();
+        event?.stopPropagation();
         setEmojiAnchorEl(null);
     };
 
@@ -706,49 +874,81 @@ const ChatComponent = ({ chatUser, isLoading }) => {
 
     const handleBlockUser = async () => {
         try {
-            await window.axios.post(`/api/users/${chatUser.id}/block`);
+            await userBlockActions.createUserBlock({ blocked_id: chatUser.id });
             toast.success('Користувача заблоковано!');
+            queryClient.invalidateQueries(['userBlock', chatUser?.username]);
         } catch (error) {
             toast.error('Не вдалося заблокувати користувача');
-            console.error(error);
         }
         handleMenuClose();
     };
 
-    // User display name
-    const displayName = chatUser?.first_name || chatUser?.last_name
-        ? `${chatUser?.first_name || ''} ${chatUser?.last_name || ''}`.trim()
-        : chatUser?.username || 'Користувач';
+    const handleUnblockUser = async () => {
+        try {
+            const userBlock = await userBlockActions.getUserBlocks(`filter[blocked.username]=${chatUser.username}`);
+            await userBlockActions.deleteUserBlock(userBlock?.data[0]?.id);
+            toast.success('Користувача розблоковано!');
+            queryClient.invalidateQueries(['userBlock', chatUser?.username]);
+        } catch (error) {
+            toast.error('Не вдалося розблокувати користувача');
+        }
+        handleMenuClose();
+    };
 
-    // Avatar content
+    const displayName =
+        chatUser?.first_name || chatUser?.last_name
+            ? `${chatUser?.first_name || ''} ${chatUser?.last_name || ''}`.trim()
+            : chatUser?.username || 'Користувач';
+
+// Avatar content
     const getAvatarContent = () => {
         if (chatUser?.avatar) {
-            return <Avatar src={chatUser.avatar} alt={displayName} />;
+            return <Avatar src={chatUser.avatar} alt={displayName}/>;
         }
         if (chatUser?.username) {
             return (
-                <Avatar sx={{ bgcolor: COLORS.accent }}>
+                <Avatar sx={{bgcolor: COLORS.accent}}>
                     {chatUser.username.charAt(0).toUpperCase()}
                 </Avatar>
             );
         }
         return (
-            <Avatar sx={{ bgcolor: COLORS.accent }}>
-                {displayName.charAt(0).toUpperCase()}
-            </Avatar>
+            <Avatar sx={{bgcolor: COLORS.accent}}>{displayName.charAt(0).toUpperCase()}</Avatar>
         );
     };
 
-    const allMessages = (data?.pages.flatMap(page => page.data.data) || []).sort(
-        (a, b) => new Date(a.created_at) - new Date(b.created_at)
+    const allMessages = (data?.pages.flatMap((page) => page.data.data) || []).sort(
+        (a, b) => new Date(a.created_at) - new Date(b.created_at),
     );
+
+// Messages container styles
+    const messagesContainerStyles = {
+        flexGrow: 1,
+        flexShrink: 1,
+        overflowY: 'auto',
+        p: {xs: '12px 8px', sm: '16px 12px'},
+        background: 'transparent',
+        scrollBehavior: 'auto',
+        '&::-webkit-scrollbar': {
+            width: '6px',
+        },
+        '&::-webkit-scrollbar-track': {
+            background: 'rgba(255, 255, 255, 0.05)',
+            borderRadius: '3px',
+        },
+        '&::-webkit-scrollbar-thumb': {
+            background: COLORS.accent,
+            borderRadius: '3px',
+        },
+        overflowAnchor: 'none',
+    };
 
     return (
         <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.3, ease: 'easeOut' }}
-            style={{ height: '100%', width: '100%' }}
+            initial={{opacity: 0, scale: 0.95}}
+            animate={{opacity: 1, scale: 1}}
+            transition={{duration: 0.3, ease: 'easeOut'}}
+            style={{height: '100%', width: '100%'}}
         >
             <Box
                 sx={{
@@ -761,17 +961,16 @@ const ChatComponent = ({ chatUser, isLoading }) => {
             >
                 <Paper
                     sx={{
-                        width: { xs: '100%', md: '800px' },
+                        width: {xs: '100%', md: '100%'},
                         height: '100%',
                         background: COLORS.chatBackground,
-                        backdropFilter: 'blur(10px)',
                         border: `1px solid ${COLORS.border}`,
-                        borderRadius: SIZES.borderRadius,
                         display: 'flex',
                         flexDirection: 'column',
                         overflow: 'hidden',
                         boxSizing: 'border-box',
-                        boxShadow: '0px 10px 25px rgba(0, 0, 0, 0.5)',
+                        borderRadius: SIZES.borderRadius,
+                        boxShadow: '0 2px 10px rgba(0, 0,0.5)',
                     }}
                 >
                     {/* Header */}
@@ -783,21 +982,17 @@ const ChatComponent = ({ chatUser, isLoading }) => {
                             justifyContent: 'space-between',
                             background: 'transparent',
                             flexShrink: 0,
+                            borderBottom: `1px solid ${COLORS.divider}`,
                         }}
                     >
                         {isLoading || !chatUser ? (
                             <motion.div
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.3 }}
+                                initial={{opacity: 0, y: 20}}
+                                animate={{opacity: 1, y: 0}}
+                                transition={{duration: 0.3}}
                             >
-                                <Paper
+                                <Box
                                     sx={{
-                                        backgroundColor: 'rgba(10, 10, 15, 0.7)',
-                                        borderRadius: 2,
-                                        p: 2,
-                                        border: '1px solid rgba(156, 39, 176, 0.2)',
-                                        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
                                         display: 'flex',
                                         alignItems: 'center',
                                         gap: 1.5,
@@ -807,31 +1002,29 @@ const ChatComponent = ({ chatUser, isLoading }) => {
                                         variant="circular"
                                         width={SIZES.avatarHeader.sm}
                                         height={SIZES.avatarHeader.sm}
-                                        sx={{ bgcolor: COLORS.skeleton }}
+                                        sx={{bgcolor: COLORS.skeleton}}
                                     />
                                     <Box>
                                         <Skeleton
                                             width={100}
                                             height={20}
-                                            sx={{ bgcolor: COLORS.skeleton, mb: 1 }}
+                                            sx={{bgcolor: COLORS.skeleton, mb: 1}}
                                         />
                                         <Skeleton
                                             variant="rounded"
                                             width={60}
                                             height={SIZES.chipHeight}
-                                            sx={{ borderRadius: '10px', bgcolor: COLORS.skeleton }}
+                                            sx={{borderRadius: '10px', bgcolor: COLORS.skeleton}}
                                         />
                                     </Box>
-                                </Paper>
+                                </Box>
                             </motion.div>
                         ) : (
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                <IconButton sx={{ padding: 0 }}>
-                                    {getAvatarContent()}
-                                </IconButton>
+                            <Box sx={{display: 'flex', alignItems: 'center', gap: 1.5}}>
+                                <IconButton sx={{padding: 0}}>{getAvatarContent()}</IconButton>
                                 <Box>
                                     <Typography
-                                        variant="subtitle1"
+                                        variant="body1"
                                         sx={{
                                             fontWeight: '500',
                                             color: COLORS.textPrimary,
@@ -844,7 +1037,9 @@ const ChatComponent = ({ chatUser, isLoading }) => {
                                         label={chatUser?.is_online ? 'Онлайн' : 'Офлайн'}
                                         size="small"
                                         sx={{
-                                            bgcolor: chatUser?.is_online ? 'rgba(76, 175, 80, 0.3)' : 'rgba(244, 67, 54, 0.2)',
+                                            bgcolor: chatUser?.is_online
+                                                ? 'rgba(76, 175, 80, 0.3)'
+                                                : 'rgba(244, 67, 54, 0.2)',
                                             color: chatUser?.is_online ? COLORS.online : COLORS.offline,
                                             fontSize: '12px',
                                             height: SIZES.chipHeight,
@@ -856,17 +1051,17 @@ const ChatComponent = ({ chatUser, isLoading }) => {
                         )}
                         <IconButton
                             onClick={handleMenuOpen}
-                            sx={{ color: COLORS.textPrimary }}
+                            sx={{color: COLORS.textPrimary}}
                             disabled={!chatUser}
                         >
-                            <MoreVertIcon />
+                            <MoreVertIcon/>
                         </IconButton>
                         <Menu
                             anchorEl={anchorEl}
                             open={Boolean(anchorEl)}
                             onClose={handleMenuClose}
-                            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                            anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
+                            transformOrigin={{vertical: 'top', horizontal: 'right'}}
                             PaperProps={{
                                 sx: {
                                     background: COLORS.chatBackground,
@@ -874,7 +1069,7 @@ const ChatComponent = ({ chatUser, isLoading }) => {
                                     border: `1px solid ${COLORS.border}`,
                                     boxShadow: '0px 10px 25px rgba(0, 0, 0, 0.5)',
                                     marginTop: '8px',
-                                    minWidth: '200px',
+                                    minWidth: '220px',
                                     backdropFilter: 'blur(10px)',
                                     '&::before': {
                                         content: '""',
@@ -886,70 +1081,76 @@ const ChatComponent = ({ chatUser, isLoading }) => {
                                         background: `linear-gradient(90deg, transparent, ${COLORS.accent}, transparent)`,
                                     },
                                     '& .MuiMenuItem-root': {
-                                        padding: '10px 16px',
+                                        padding: '8px 12px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 1,
+                                        transition: 'all 0.2s ease',
+                                        '&:hover': {
+                                            background: 'rgba(156, 39, 176, 0.2)',
+                                            transform: 'translateX(4px)',
+                                            boxShadow: `0 0 8px rgba(156, 39, 176, 0.3)`,
+                                        },
+                                        '& svg': {
+                                            fontSize: '18px',
+                                            color: COLORS.textSecondary,
+                                        },
                                     },
                                 },
                             }}
                         >
-                            <MenuItem onClick={handleDeleteChat}>Видалити чат</MenuItem>
-                            <MenuItem onClick={handleBlockUser}>Заблокувати користувача</MenuItem>
+                            <MenuItem onClick={handleDeleteChat}>
+                                <DeleteIcon/>
+                                Видалити чат
+                            </MenuItem>
+                            {isUserBlocked ? (
+                                <MenuItem onClick={handleUnblockUser}>
+                                    <LockOpenIcon />
+                                    Розблокувати користувача
+                                </MenuItem>
+                            ) : (
+                                <MenuItem onClick={handleBlockUser}>
+                                    <BlockIcon />
+                                    Заблокувати користувача
+                                </MenuItem>
+                            )}
                         </Menu>
                     </Box>
 
                     {/* Messages Area */}
-                    <Box
-                        ref={messagesContainerRef}
-                        sx={{
-                            flexGrow: 1,
-                            flexShrink: 1,
-                            overflowY: 'auto',
-                            p: { xs: '12px 8px', sm: '16px 12px' },
-                            background: 'transparent',
-                            '&::-webkit-scrollbar': {
-                                width: '6px',
-                            },
-                            '&::-webkit-scrollbar-track': {
-                                background: 'rgba(255, 255, 255, 0.05)',
-                                borderRadius: '3px',
-                            },
-                            '&::-webkit-scrollbar-thumb': {
-                                background: COLORS.accent,
-                                borderRadius: '3px',
-                            },
-                        }}
-                    >
+                    <Box ref={messagesContainerRef} sx={messagesContainerStyles}>
                         {isFetching && !data && (
                             <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
+                                initial={{opacity: 0}}
+                                animate={{opacity: 1}}
+                                exit={{opacity: 0}}
                             >
-                                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+                                <Box sx={{display: 'flex', justifyContent: 'center', mt: 2}}>
                                     <CircularProgress
                                         size={40}
                                         thickness={4}
-                                        sx={{ color: COLORS.accent }}
+                                        sx={{color: COLORS.accent}}
                                     />
                                 </Box>
                             </motion.div>
                         )}
                         {isError ? (
-                            <Typography sx={{ color: COLORS.textSecondary, textAlign: 'center' }}>
-                                {error?.message || 'Не вдалося завантажити повідомлення'}
+                            <Typography sx={{color: COLORS.textSecondary, textAlign: 'center'}}>
+                                {error?.message || 'Failed to load messages'}
                             </Typography>
                         ) : (
                             <>
                                 {isFetching && data && (
                                     <motion.div
-                                        initial={{ opacity: 0 }}
-                                        animate={{ opacity: 1 }}
-                                        exit={{ opacity: 0 }}
+                                        initial={{opacity: 0}}
+                                        animate={{opacity: 1}}
+                                        exit={{opacity: 0}}
                                     >
-                                        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+                                        <Box sx={{display: 'flex', justifyContent: 'center', mb: 2}}>
                                             <CircularProgress
                                                 size={24}
                                                 thickness={4}
-                                                sx={{ color: COLORS.accent }}
+                                                sx={{color: COLORS.accent}}
                                             />
                                         </Box>
                                     </motion.div>
@@ -964,7 +1165,7 @@ const ChatComponent = ({ chatUser, isLoading }) => {
                                         nextMessage={index < allMessages.length - 1 ? allMessages[index + 1] : null}
                                     />
                                 ))}
-                                <div ref={messagesEndRef} />
+                                <div ref={messagesEndRef}/>
                             </>
                         )}
                     </Box>
@@ -973,19 +1174,17 @@ const ChatComponent = ({ chatUser, isLoading }) => {
                     {showScrollButton && (
                         <Fab
                             size="small"
-                            onClick={() => scrollToBottom({ behavior: 'smooth' })}
+                            onClick={() => scrollToBottom({behavior: 'smooth'})}
                             sx={{
                                 position: 'absolute',
                                 bottom: '80px',
                                 right: '20px',
                                 bgcolor: COLORS.accent,
                                 color: COLORS.textPrimary,
-                                '&:hover': {
-                                    bgcolor: '#7b1fa2',
-                                },
+                                '&:hover': {bgcolor: '#7b1fa2'},
                             }}
                         >
-                            <ArrowDownwardIcon />
+                            <ArrowDownwardIcon/>
                             {unreadCount > 0 && (
                                 <Chip
                                     label={unreadCount}
@@ -1058,7 +1257,7 @@ const ChatComponent = ({ chatUser, isLoading }) => {
                                                     }}
                                                 >
                                                     <img
-                                                        src={URL.createObjectURL(file)}
+                                                        src={fileUrls[index]}
                                                         alt={file.name}
                                                         style={{
                                                             width: '80px',
@@ -1069,7 +1268,18 @@ const ChatComponent = ({ chatUser, isLoading }) => {
                                                         }}
                                                     />
                                                     <IconButton
-                                                        onClick={() => setFiles(files.filter((_, i) => i !== index))}
+                                                        onClick={() => {
+                                                            const url = fileUrls[index];
+                                                            setFiles(files.filter((_, i) => i !== index));
+                                                            setFileUrls(urls => {
+                                                                const newUrls = urls.filter((_, i) => i !== index);
+                                                                URL.revokeObjectURL(url);
+                                                                return newUrls;
+                                                            });
+                                                            if (fileInputRef.current) {
+                                                                fileInputRef.current.value = null;
+                                                            }
+                                                        }}
                                                         sx={{
                                                             position: 'absolute',
                                                             top: '-10px',
@@ -1112,7 +1322,7 @@ const ChatComponent = ({ chatUser, isLoading }) => {
                                                     }}
                                                 >
                                                     <video
-                                                        src={URL.createObjectURL(file)}
+                                                        src={fileUrls[index]}
                                                         style={{
                                                             width: '80px',
                                                             height: '80px',
@@ -1122,7 +1332,18 @@ const ChatComponent = ({ chatUser, isLoading }) => {
                                                         }}
                                                     />
                                                     <IconButton
-                                                        onClick={() => setFiles(files.filter((_, i) => i !== index))}
+                                                        onClick={() => {
+                                                            const url = fileUrls[index];
+                                                            setFiles(files.filter((_, i) => i !== index));
+                                                            setFileUrls(urls => {
+                                                                const newUrls = urls.filter((_, i) => i !== index);
+                                                                URL.revokeObjectURL(url);
+                                                                return newUrls;
+                                                            });
+                                                            if (fileInputRef.current) {
+                                                                fileInputRef.current.value = null;
+                                                            }
+                                                        }}
                                                         sx={{
                                                             position: 'absolute',
                                                             top: '-10px',
@@ -1157,7 +1378,18 @@ const ChatComponent = ({ chatUser, isLoading }) => {
                                                 <Chip
                                                     key={index}
                                                     label={file.name}
-                                                    onDelete={() => setFiles(files.filter((_, i) => i !== index))}
+                                                    onDelete={() => {
+                                                        const url = fileUrls[index];
+                                                        setFiles(files.filter((_, i) => i !== index));
+                                                        setFileUrls(urls => {
+                                                            const newUrls = urls.filter((_, i) => i !== index);
+                                                            URL.revokeObjectURL(url);
+                                                            return newUrls;
+                                                        });
+                                                        if (fileInputRef.current) {
+                                                            fileInputRef.current.value = null;
+                                                        }
+                                                    }}
                                                     sx={{
                                                         bgcolor: 'rgba(156, 39, 176, 0.2)',
                                                         color: COLORS.textPrimary,
@@ -1178,8 +1410,8 @@ const ChatComponent = ({ chatUser, isLoading }) => {
                                     anchorEl={emojiAnchorEl}
                                     open={Boolean(emojiAnchorEl)}
                                     onClose={handleEmojiMenuClose}
-                                    anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
-                                    transformOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                                    anchorOrigin={{vertical: 'top', horizontal: 'left'}}
+                                    transformOrigin={{vertical: 'bottom', horizontal: 'left'}}
                                     PaperProps={{
                                         sx: {
                                             background: COLORS.chatBackground,
@@ -1223,6 +1455,84 @@ const ChatComponent = ({ chatUser, isLoading }) => {
                                     </Box>
                                 </Menu>
 
+                                {/* Link Dialog */}
+                                <Dialog
+                                    open={linkDialogOpen}
+                                    onClose={() => setLinkDialogOpen(false)}
+                                    maxWidth="xs"
+                                    fullWidth
+                                    sx={{
+                                        '& .MuiDialog-paper': {
+                                            background: COLORS.chatBackground,
+                                            border: `1px solid ${COLORS.border}`,
+                                            borderRadius: SIZES.borderRadius,
+                                            backdropFilter: 'blur(15px)',
+                                            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
+                                            color: COLORS.textPrimary,
+                                        },
+                                    }}
+                                >
+                                    <Box sx={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        p: SIZES.padding
+                                    }}>
+                                        <Typography variant="h6" sx={{color: COLORS.textPrimary}}>
+                                            Вставити посилання
+                                        </Typography>
+                                        <IconButton
+                                            onClick={() => setLinkDialogOpen(false)}
+                                            sx={{color: COLORS.textSecondary, '&:hover': {color: COLORS.accent}}}
+                                        >
+                                            <Close/>
+                                        </IconButton>
+                                    </Box>
+                                    <DialogContent sx={{p: SIZES.padding, pt: 0}}>
+                                        <TextField
+                                            fullWidth
+                                            label="URL"
+                                            value={linkUrl}
+                                            onChange={(e) => setLinkUrl(e.target.value)}
+                                            placeholder="https://example.com"
+                                            sx={{
+                                                '& .MuiInputBase-input': {color: COLORS.textPrimary},
+                                                '& .MuiInputLabel-root': {color: COLORS.textSecondary},
+                                                '& .MuiOutlinedInput-root': {
+                                                    '& fieldset': {borderColor: COLORS.border},
+                                                    '&:hover fieldset': {borderColor: COLORS.accent},
+                                                    '&.Mui-focused fieldset': {borderColor: COLORS.accent},
+                                                },
+                                            }}
+                                        />
+                                    </DialogContent>
+                                    <DialogActions sx={{p: SIZES.padding}}>
+                                        <Button
+                                            variant="contained"
+                                            onClick={handleInsertLink}
+                                            disabled={!linkUrl.trim()}
+                                            sx={{
+                                                bgcolor: COLORS.accent,
+                                                '&:hover': {bgcolor: '#7b1fa2'},
+                                                color: COLORS.textPrimary,
+                                            }}
+                                        >
+                                            Вставити
+                                        </Button>
+                                        <Button
+                                            variant="outlined"
+                                            onClick={() => setLinkDialogOpen(false)}
+                                            sx={{
+                                                color: COLORS.textPrimary,
+                                                borderColor: COLORS.border,
+                                                '&:hover': {borderColor: COLORS.accent},
+                                            }}
+                                        >
+                                            Скасувати
+                                        </Button>
+                                    </DialogActions>
+                                </Dialog>
+
                                 {/* Input and Buttons Row */}
                                 <Box
                                     sx={{
@@ -1241,7 +1551,7 @@ const ChatComponent = ({ chatUser, isLoading }) => {
                                     >
                                         <IconButton
                                             onClick={() => fileInputRef.current?.click()}
-                                            sx={{ color: COLORS.textPrimary, flexShrink: 0 }}
+                                            sx={{color: COLORS.textPrimary, flexShrink: 0}}
                                         >
                                             <svg
                                                 width="24"
@@ -1266,16 +1576,16 @@ const ChatComponent = ({ chatUser, isLoading }) => {
                                         <input
                                             type="file"
                                             ref={fileInputRef}
-                                            style={{ display: 'none' }}
+                                            style={{display: 'none'}}
                                             onChange={handleFileUpload}
                                             multiple
                                             accept="image/*,video/*"
                                         />
                                         <IconButton
                                             onClick={handleEmojiMenuOpen}
-                                            sx={{ color: COLORS.textPrimary, flexShrink: 0 }}
+                                            sx={{color: COLORS.textPrimary, flexShrink: 0}}
                                         >
-                                            <span style={{ fontSize: '24px' }}>🙂</span>
+                                            <span style={{fontSize: '24px'}}>🙂</span>
                                         </IconButton>
                                     </Box>
                                     <Box
@@ -1310,12 +1620,20 @@ const ChatComponent = ({ chatUser, isLoading }) => {
                                                     content: '"Напишіть повідомлення..."',
                                                     color: 'rgba(255, 255, 255, 0.5)',
                                                     display: 'block',
+                                                    whiteSpace: 'nowrap',
+                                                    overflow: 'hidden',
+                                                    textOverflow: 'ellipsis',
                                                 },
-                                                '& b': { fontWeight: 700 },
-                                                '& i': { fontStyle: 'italic' },
-                                                '& u': { textDecoration: 'underline' },
-                                                '& ul': { paddingLeft: '20px', margin: 0 },
-                                                '& li': { listStyleType: 'disc' },
+                                                '& b': {fontWeight: 700},
+                                                '& i': {fontStyle: 'italic'},
+                                                '& u': {textDecoration: 'underline'},
+                                                '& ul': {paddingLeft: '20px', margin: 0},
+                                                '& li': {listStyleType: 'disc'},
+                                                '& a': {
+                                                    color: COLORS.accent,
+                                                    textDecoration: 'underline',
+                                                    '&:hover': {textDecoration: 'none'},
+                                                },
                                             }}
                                         />
                                         <Popper
@@ -1338,7 +1656,7 @@ const ChatComponent = ({ chatUser, isLoading }) => {
                                                 },
                                             ]}
                                         >
-                                            {({ TransitionProps }) => (
+                                            {({TransitionProps}) => (
                                                 <Fade {...TransitionProps} timeout={200}>
                                                     <Paper
                                                         sx={{
@@ -1355,37 +1673,44 @@ const ChatComponent = ({ chatUser, isLoading }) => {
                                                         <IconButton
                                                             onClick={() => applyStyle('bold')}
                                                             size="small"
-                                                            sx={{ color: COLORS.textPrimary }}
+                                                            sx={{color: COLORS.textPrimary}}
                                                         >
-                                                            <FormatBoldIcon fontSize="small" />
+                                                            <FormatBoldIcon fontSize="small"/>
                                                         </IconButton>
                                                         <IconButton
                                                             onClick={() => applyStyle('italic')}
                                                             size="small"
-                                                            sx={{ color: COLORS.textPrimary }}
+                                                            sx={{color: COLORS.textPrimary}}
                                                         >
-                                                            <FormatItalicIcon fontSize="small" />
+                                                            <FormatItalicIcon fontSize="small"/>
                                                         </IconButton>
                                                         <IconButton
                                                             onClick={() => applyStyle('underline')}
                                                             size="small"
-                                                            sx={{ color: COLORS.textPrimary }}
+                                                            sx={{color: COLORS.textPrimary}}
                                                         >
-                                                            <FormatUnderlinedIcon fontSize="small" />
+                                                            <FormatUnderlinedIcon fontSize="small"/>
                                                         </IconButton>
                                                         <IconButton
                                                             onClick={() => applyStyle('list')}
                                                             size="small"
-                                                            sx={{ color: COLORS.textPrimary }}
+                                                            sx={{color: COLORS.textPrimary}}
                                                         >
-                                                            <FormatListBulletedIcon fontSize="small" />
+                                                            <FormatListBulletedIcon fontSize="small"/>
+                                                        </IconButton>
+                                                        <IconButton
+                                                            onClick={() => setLinkDialogOpen(true)}
+                                                            size="small"
+                                                            sx={{color: COLORS.textPrimary}}
+                                                        >
+                                                            <LinkIcon fontSize="small"/>
                                                         </IconButton>
                                                         <IconButton
                                                             onClick={() => applyStyle('removeFormat')}
                                                             size="small"
-                                                            sx={{ color: COLORS.textPrimary }}
+                                                            sx={{color: COLORS.textPrimary}}
                                                         >
-                                                            <FormatClearIcon fontSize="small" />
+                                                            <FormatClearIcon fontSize="small"/>
                                                         </IconButton>
                                                     </Paper>
                                                 </Fade>
@@ -1397,12 +1722,12 @@ const ChatComponent = ({ chatUser, isLoading }) => {
                                         disabled={!newMessage.trim() && files.length === 0}
                                         sx={{
                                             color: COLORS.accent,
-                                            '&:disabled': { color: 'rgba(156, 39, 176, 0.3)' },
+                                            '&:disabled': {color: 'rgba(156, 39, 176, 0.3)'},
                                             flexShrink: 0,
                                             alignSelf: 'center',
                                         }}
                                     >
-                                        <SendIcon fontSize="small" />
+                                        <SendIcon fontSize="small"/>
                                     </IconButton>
                                 </Box>
                             </Box>

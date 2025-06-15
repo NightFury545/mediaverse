@@ -1,6 +1,6 @@
 import React, {useRef, useState} from "react";
 import {Avatar, Box, Divider, IconButton, Menu, MenuItem, Typography} from "@mui/material";
-import {AccountCircle, ExitToApp, Person, Settings, Star} from "@mui/icons-material";
+import {AccountCircle, AdminPanelSettings, ExitToApp, Person, Settings} from "@mui/icons-material";
 import {useAuth} from "@/Components/Auth/AuthProvider.jsx";
 import {toast} from "react-toastify";
 import {useNavigate} from "react-router-dom";
@@ -34,6 +34,11 @@ const UserMenu = ({onSignInClick}) => {
         logout();
         handleMenuClose();
         toast.success("Успішний вихід.");
+    };
+
+    const handleAdminPanel = () => {
+        window.location.href = '/admin-dashboard';
+        handleMenuClose();
     };
 
     const getAvatarContent = () => {
@@ -145,7 +150,12 @@ const UserMenu = ({onSignInClick}) => {
                         <Settings sx={{marginRight: 2, fontSize: "20px", color: "white"}}/>
                         <Typography variant="body2">Налаштування</Typography>
                     </MenuItem>
-
+                    {user.role === 'admin' && (
+                        <MenuItem onClick={handleAdminPanel}>
+                            <AdminPanelSettings sx={{marginRight: 2, fontSize: "20px", color: "white"}}/>
+                            <Typography variant="body2">Адмін-панель</Typography>
+                        </MenuItem>
+                    )}
                     <Divider sx={{borderColor: "rgba(255, 255, 255, 0.1)"}}/>
 
                     <MenuItem onClick={handleLogout}>

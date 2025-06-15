@@ -51,7 +51,7 @@ class CreateMessageAction
             $message->load('user');
 
             ($this->updateChatAction)($message->chat, [
-                'last_message' => $message->content,
+                'last_message' => $message->content ?? $message->attachments[0],
             ]);
 
             broadcast(new MessageSentEvent($message))->toOthers();
@@ -69,10 +69,10 @@ class CreateMessageAction
      * Створює нове повідомлення в базі даних.
      *
      * @param array $data Дані для створення повідомлення.
-     * @param string|null $attachments Вкладення, якщо є.
+     * @param array|null $attachments Вкладення, якщо є.
      * @return Message Повертає створене повідомлення.
      */
-    private function createMessage(array $data, ?string $attachments): Message
+    private function createMessage(array $data, ?array $attachments): Message
     {
         return Message::create([
             'chat_id' => $data['chat_id'],

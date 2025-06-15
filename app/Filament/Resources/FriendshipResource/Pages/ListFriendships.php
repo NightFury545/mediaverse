@@ -17,17 +17,17 @@ class ListFriendships extends ListRecords
         return $table
             ->columns([
                 TextColumn::make('user.username')
-                    ->label('User')
+                    ->label('Користувач')
                     ->sortable()
                     ->searchable(),
 
                 TextColumn::make('friend.username')
-                    ->label('Friend')
+                    ->label('Друг')
                     ->sortable()
                     ->searchable(),
 
                 TextColumn::make('status')
-                    ->label('Status')
+                    ->label('Статус')
                     ->sortable()
                     ->searchable(),
             ])

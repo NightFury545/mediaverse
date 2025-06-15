@@ -21,7 +21,7 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
-            $table->string('avatar')->default(asset('storage/avatars/default-avatar.webp'));
+            $table->string('avatar')->default('https://i.pinimg.com/736x/2d/ab/c8/2dabc840f3eef923b3ce06d91ad2417e.jpg');
             $table->enum('role', Role::getValues())->default(Role::USER->value);
             $table->string('biography', 364)->nullable();
             $table->date('birthday')->nullable();

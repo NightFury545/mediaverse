@@ -7,7 +7,7 @@ import {
     useTheme,
 } from '@mui/material';
 import { motion } from 'framer-motion';
-import { Image, Videocam } from '@mui/icons-material';
+import {AttachFile, Image, Videocam} from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/Components/Auth/AuthProvider.jsx';
 import {formatDate} from "@/utils/formatDate.js";
@@ -18,7 +18,7 @@ const ChatCard = ({ chat }) => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-    const interlocutor = chat.user_one.id === user.id ? chat.user_two : chat.user_one;
+    const interlocutor = chat?.user_one?.id === user?.id ? chat?.user_two : chat?.user_one;
     const displayName = interlocutor?.first_name && interlocutor?.last_name
         ? `${interlocutor.first_name} ${interlocutor.last_name}`
         : interlocutor?.username || 'Невідомий користувач';
@@ -28,12 +28,23 @@ const ChatCard = ({ chat }) => {
     let messageIcon = null;
 
     if (lastMessage) {
-        if (lastMessage && lastMessage !== '<p><br></p>') {
+        if (lastMessage && lastMessage !== '<p><br></p>' && !lastMessage.includes('attachments/')) {
             messagePreview = lastMessage.replace(/<[^>]+>/g, '').trim();
-        } else if (lastMessage.attachments?.length > 0) {
-            const isVideo = lastMessage.attachments[0].type.startsWith('video');
-            messagePreview = isVideo ? 'Відео' : 'Зображення';
-            messageIcon = isVideo ? <Videocam sx={{ fontSize: isMobile ? 16 : 18, color: '#9c27b0' }} /> : <Image sx={{ fontSize: isMobile ? 16 : 18, color: '#9c27b0' }} />;
+        } else if (lastMessage && typeof lastMessage === 'string' && lastMessage.length > 0) {
+            const extension = lastMessage.toLowerCase().split('.').pop();
+            const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'];
+            const videoExtensions = ['mp4', 'mov', 'avi', 'mkv', 'webm'];
+
+            if (imageExtensions.includes(extension)) {
+                messagePreview = 'Зображення';
+                messageIcon = <Image sx={{ fontSize: isMobile ? 16 : 18, color: '#9c27b0' }} />;
+            } else if (videoExtensions.includes(extension)) {
+                messagePreview = 'Відео';
+                messageIcon = <Videocam sx={{ fontSize: isMobile ? 16 : 18, color: '#9c27b0' }} />;
+            } else {
+                messagePreview = 'Файл';
+                messageIcon = <AttachFile sx={{ fontSize: isMobile ? 16 : 18, color: '#9c27b0' }} />;
+            }
         }
     }
 

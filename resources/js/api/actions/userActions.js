@@ -1,7 +1,7 @@
-import {postUrls, userUrls} from '@/api/urls';
+import {userUrls} from '@/api/urls';
 const getUsers = (query = null) => {
     if (typeof query === 'string' && query.trim() !== '') {
-        const separator = postUrls.index.includes('?') ? '&' : '?';
+        const separator = userUrls.index.includes('?') ? '&' : '?';
         return window.axios.get(`${userUrls.index}${separator}${query}`);
     } else if (query && typeof query === 'object') {
         return window.axios.get(userUrls.index, { params: query });

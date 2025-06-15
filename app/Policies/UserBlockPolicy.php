@@ -13,7 +13,7 @@ class UserBlockPolicy
      */
     public function viewAny(User $user): bool
     {
-        return false;
+        return $user->role === 'admin';
     }
 
     /**
@@ -21,7 +21,7 @@ class UserBlockPolicy
      */
     public function view(User $user, UserBlock $userBlock): bool
     {
-        return false;
+        return $user->role === 'admin';
     }
 
     /**
@@ -29,7 +29,7 @@ class UserBlockPolicy
      */
     public function create(User $user): bool
     {
-        return false;
+        return $user->role === 'admin';
     }
 
     /**
@@ -45,6 +45,6 @@ class UserBlockPolicy
      */
     public function delete(User $user, UserBlock $userBlock): bool
     {
-        return false;
+        return $userBlock->user_id === $user->id || $user->role === 'admin';
     }
 }

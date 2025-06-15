@@ -23,8 +23,7 @@ import {
 } from '@mui/icons-material';
 import { useParams } from 'react-router-dom';
 import PostCard from '@/Components/Social/PostCard.jsx';
-import { postActions, likeActions } from '@/api/actions';
-import { useAuth } from "@/Components/Auth/AuthProvider.jsx";
+import { postActions } from '@/api/actions';
 import InlinePostCard from "@/Components/Social/InlinePostCard.jsx";
 import PostCommentsSection from "@/Components/Social/PostCommentsSection.jsx";
 import ErrorMessage from "@/Components/Social/ErrorMessage.jsx";
@@ -56,7 +55,7 @@ const fetchPost = async (slug) => {
 };
 
 const fetchSimilarPosts = async (tags) => {
-    const query = tags.length > 0 ? `filter[tags]=${tags.join(',')}&perPage=5` : 'perPage=5';
+    const query = (tags.length > 0 ? `filter[tags]=${tags.join(',')}&perPage=5` : 'perPage=5') + '&filter[visibility]=public';
     const response = await postActions.getPosts(query);
     return {
         posts: response.data.data.map((post) => ({
@@ -88,7 +87,7 @@ const fetchUserPosts = async (username) => {
     };
 };
 
-const EmptySimilarPostsPlaceholder = () => (
+const EmptySimilarPostsPlaceholder = ({ message = 'Схожих постів немає' }) => (
     <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -107,7 +106,7 @@ const EmptySimilarPostsPlaceholder = () => (
                 sx={{ fontSize: 40, color: '#9c27b0', mb: 1, opacity: 0.7 }}
             />
             <Typography variant="body1" sx={{ color: '#b0b0b0', fontStyle: 'italic' }}>
-                Схожих постів немає
+                {message}
             </Typography>
         </Paper>
     </motion.div>
@@ -121,6 +120,13 @@ const PostDetailsPage = () => {
     const isMediumScreen = useMediaQuery(theme.breakpoints.between('md', 'lg'));
     const { identifier } = useParams();
 
+    useEffect(() => {
+        window.scrollTo({
+            top: 0,
+            behavior: 'instant',
+        });
+    }, []);
+
     const {
         data: post,
         isLoading: isPostLoading,
@@ -131,11 +137,6 @@ const PostDetailsPage = () => {
         retry: false,
         refetchOnWindowFocus: false
     });
-
-    if (isPostError) {
-        const errorMessage = postError.response?.data?.error || 'Цей пост приватний або у вас немає прав для перегляду';
-        return <ErrorMessage message={errorMessage} isMobile={isMobile} />;
-    }
 
     const {
         data: similarPostsData,
@@ -157,6 +158,11 @@ const PostDetailsPage = () => {
         staleTime: 1000 * 60,
         retry: false
     });
+
+    if (isPostError) {
+        const errorMessage = postError.response?.data?.error || 'Цей пост приватний або у вас немає прав для перегляду';
+        return <ErrorMessage message={errorMessage} isMobile={isMobile} />;
+    }
 
     const similarPosts = similarPostsData?.posts || [];
     const totalSimilarPosts = similarPostsData?.totalPosts || 0;
@@ -285,7 +291,7 @@ const PostDetailsPage = () => {
                     Помилка завантаження постів користувача
                 </Typography>
             ) : totalUserPosts === 0 ? (
-                <EmptySimilarPostsPlaceholder />
+                <EmptySimilarPostsPlaceholder message={'Користувач більше не має постів'} />
             ) : (
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     {userPosts.map((post) => (

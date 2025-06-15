@@ -34,6 +34,8 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { format } from 'date-fns';
+import {useInfiniteQuery} from "react-query";
+import {tagActions} from "@/api/actions/index.js";
 
 const PostsFilter = ({ isMobile, onClose, onApplyFilters }) => {
     const [sort, setSort] = useState('-created_at');
@@ -48,7 +50,27 @@ const PostsFilter = ({ isMobile, onClose, onApplyFilters }) => {
     const [viewsCount, setViewsCount] = useState([0, 10000]);
     const [createdAt, setCreatedAt] = useState([null, null]);
 
-    const availableTags = ['gaming', 'news', 'tech', 'art', 'science', 'sports', 'coding', 'culture', 'music', 'travel', 'food'];
+    const {
+        data: tagsData,
+        fetchNextPage,
+        hasNextPage,
+        isLoading: isTagsLoading,
+        isError: isTagsError,
+        error: tagsError,
+        isFetchingNextPage,
+    } = useInfiniteQuery(
+        ['tags'],
+        ({ pageParam = 1 }) => tagActions.getTags({ page: pageParam }).then((response) => response.data),
+        {
+            getNextPageParam: (lastPage) => {
+                const { current_page, last_page } = lastPage;
+                return current_page < last_page ? current_page + 1 : undefined;
+            },
+            staleTime: 1000 * 60 * 5,
+        }
+    );
+
+    const availableTags = tagsData?.pages.flatMap((page) => page.data.map((tag) => tag.name)).sort() || [];
 
     const handleTagToggle = (tag) => {
         setTags((prev) =>
@@ -288,23 +310,53 @@ const PostsFilter = ({ isMobile, onClose, onApplyFilters }) => {
                         '&::-webkit-scrollbar': { display: 'none' },
                     }}
                 >
-                    {availableTags.map((tag) => (
+                    {isTagsLoading && !availableTags.length ? (
+                        <Typography variant="caption" sx={{ color: '#e0e0e0', m: 2 }}>
+                            Завантаження тегів...
+                        </Typography>
+                    ) : isTagsError ? (
+                        <Typography variant="caption" sx={{ color: '#ff4081', m: 2 }}>
+                            Помилка: {tagsError?.response?.data?.message || 'Не вдалося завантажити теги'}
+                        </Typography>
+                    ) : availableTags.length > 0 ? (
+                        availableTags.map((tag) => (
+                            <Chip
+                                key={tag}
+                                label={'# ' + tag}
+                                clickable
+                                onClick={() => handleTagToggle(tag)}
+                                sx={{
+                                    fontSize: 12,
+                                    height: 26,
+                                    color: tags.includes(tag) ? '#ff4081' : '#e0e0e0',
+                                    bgcolor: tags.includes(tag) ? 'rgba(255, 64, 129, 0.2)' : 'rgba(156, 39, 176, 0.2)',
+                                    '&:hover': {
+                                        bgcolor: tags.includes(tag) ? 'rgba(255, 64, 129, 0.3)' : 'rgba(156, 39, 176, 0.3)',
+                                    },
+                                }}
+                            />
+                        ))
+                    ) : (
+                        <Typography variant="caption" sx={{ color: '#e0e0e0', m: 2 }}>
+                            Немає доступних тегів
+                        </Typography>
+                    )}
+                    {hasNextPage && (
                         <Chip
-                            key={tag}
-                            label={'# ' + tag}
-                            clickable
-                            onClick={() => handleTagToggle(tag)}
+                            label={isFetchingNextPage ? 'Завантаження...' : 'Завантажити ще'}
+                            onClick={() => fetchNextPage()}
+                            disabled={isFetchingNextPage}
                             sx={{
                                 fontSize: 12,
                                 height: 26,
-                                color: tags.includes(tag) ? '#ff4081' : '#e0e0e0',
-                                bgcolor: tags.includes(tag) ? 'rgba(255, 64, 129, 0.2)' : 'rgba(156, 39, 176, 0.2)',
+                                color: '#e0e0e0',
+                                bgcolor: 'rgba(156, 39, 176, 0.2)',
                                 '&:hover': {
-                                    bgcolor: tags.includes(tag) ? 'rgba(255, 64, 129, 0.3)' : 'rgba(156, 39, 176, 0.3)',
+                                    bgcolor: 'rgba(156, 39, 176, 0.3)',
                                 },
                             }}
                         />
-                    ))}
+                    )}
                 </Box>
 
                 {/* Search */}

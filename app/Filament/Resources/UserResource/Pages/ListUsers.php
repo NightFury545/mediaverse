@@ -32,44 +32,46 @@ class ListUsers extends ListRecords
         return $table
             ->columns([
                 TextColumn::make('username')
-                    ->label('Username')
+                    ->label('Нікнейм')
                     ->sortable()
                     ->searchable(),
 
                 TextColumn::make('email')
-                    ->label('Email')
+                    ->label('Електронна адреса')
                     ->sortable()
                     ->searchable(),
 
                 TextColumn::make('gender')
-                    ->label('Gender')
+                    ->label('Стать')
                     ->sortable()
                     ->searchable(),
 
                 TextColumn::make('birthday')
-                    ->label('Birthday')
+                    ->label('День народження')
                     ->sortable()
                     ->searchable(),
 
                 TextColumn::make('role')
-                    ->label('Role')
+                    ->label('Роль')
                     ->sortable()
                     ->searchable(),
 
                 ImageColumn::make('avatar')
-                    ->label('Avatar'),
+                    ->label('Аватар'),
 
                 TextColumn::make('created_at')
-                    ->label('Created at')
+                    ->label('Дата створення')
                     ->dateTime()
                     ->sortable(),
             ])
             ->filters([
                 SelectFilter::make('role')
+                    ->label('Роль')
                     ->options(
                         array_combine(Role::getValues(), Role::getValues())
                     ),
                 SelectFilter::make('gender')
+                    ->label('Стать')
                     ->options(
                         array_combine(Gender::getValues(), Gender::getValues())
                     ),

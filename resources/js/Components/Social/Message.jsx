@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     Box,
     Typography,
@@ -11,12 +11,12 @@ import {
     Grid,
     Button,
     Divider,
+    CircularProgress,
 } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Edit,
     Delete,
-    Check,
     Close,
 } from '@mui/icons-material';
 import { useMutation, useQueryClient } from 'react-query';
@@ -26,6 +26,8 @@ import '../../../css/quill.css';
 import { messageActions } from '@/api/actions';
 import { useAuth } from '@/Components/Auth/AuthProvider.jsx';
 import { toast } from 'react-toastify';
+import { normalizeAttachments } from "@/utils/normalizeAttachments.js";
+import { STORAGE_PRIVATE_CHAT_URL } from "@/config/env.js";
 
 // Constants for styles
 const COLORS = {
@@ -40,10 +42,12 @@ const COLORS = {
 
 const SIZES = {
     avatarMessage: 40,
-    fontSizeMessage: { xs: '14px', sm: '15px' },
+    fontSizeMessage: { xs: '14px', sm: '16px' },
     padding: { xs: '12px', sm: '16px' },
     borderRadius: { xs: 0, sm: '12px' },
-    messageMargin: '12px',
+    messageMargin: '16px',
+    mediaSize: { xs: '120px', sm: '150px' },
+    singleMediaSize: { xs: '250px', sm: '300px' },
 };
 
 const quillModules = {
@@ -62,6 +66,32 @@ const quillFormats = [
     'list', 'bullet',
 ];
 
+// Double Checkmark SVG Icon
+const DoubleCheckIcon = ({ color, fontSize }) => (
+    <svg
+        width={fontSize}
+        height={fontSize}
+        viewBox="0 0 24 24"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+    >
+        <path
+            d="M1.5 12.5L5.5 16.5L10.5 8.5"
+            stroke={color}
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+        />
+        <path
+            d="M7.5 12.5L11.5 16.5L22.5 5.5"
+            stroke={color}
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+        />
+    </svg>
+);
+
 // Format time to HH:mm
 const formatTime = (date) => {
     return new Date(date).toLocaleTimeString('en-US', {
@@ -71,41 +101,101 @@ const formatTime = (date) => {
     });
 };
 
-const MediaPreview = ({ attachments, isMobile }) => {
+const MediaPreview = ({ attachments, isMobile, blobUrls, mediaLoaded, mediaErrors, onMediaClick, isSingleMedia }) => {
     const count = attachments.length;
     if (count === 0) return null;
 
+    const maxWidth = isSingleMedia ? (isMobile ? '100%' : '400px') : (isMobile ? '90%' : '350px');
+    const mediaSize = isSingleMedia ? SIZES.singleMediaSize : SIZES.mediaSize;
+
     return (
-        <Grid container spacing={1} sx={{ mt: 1, maxWidth: isMobile ? '80%' : 300 }}>
+        <Grid container spacing={1} sx={{ mt: 0, maxWidth }}>
             {attachments.slice(0, 5).map((media, index) => {
                 const isVideo = media.type.startsWith('video');
+                const mediaUrl = blobUrls[media.url] || '';
+
                 return (
-                    <Grid item xs={count <= 2 ? 6 : 4} key={index}>
-                        {isVideo ? (
-                            <video
-                                src={media.url}
-                                controls
-                                style={{
-                                    width: '100%',
-                                    borderRadius: '8px',
-                                    maxHeight: count <= 2 ? '150px' : '100px',
-                                    objectFit: 'cover',
-                                    border: `1px solid ${COLORS.border}`,
-                                }}
-                            />
-                        ) : (
-                            <img
-                                src={media.url}
-                                alt={`Media ${index}`}
-                                style={{
-                                    width: '100%',
-                                    borderRadius: '8px',
-                                    maxHeight: count <= 2 ? '150px' : '100px',
-                                    objectFit: 'cover',
-                                    border: `1px solid ${COLORS.border}`,
-                                }}
-                            />
-                        )}
+                    <Grid item xs={isSingleMedia ? 12 : count <= 2 ? 6 : 4} key={index}>
+                        <Box
+                            sx={{
+                                position: 'relative',
+                                width: '100%',
+                                paddingBottom: isSingleMedia ? '75%' : '100%',
+                                borderRadius: '8px',
+                                overflow: 'hidden',
+                                border: `1px solid ${COLORS.border}`,
+                                bgcolor: 'rgba(0, 0, 0, 0.5)',
+                                cursor: mediaLoaded[index] && !mediaErrors[index] ? 'pointer' : 'default',
+                            }}
+                            onClick={() => mediaLoaded[index] && !mediaErrors[index] && onMediaClick(media, index)}
+                        >
+                            {!mediaLoaded[index] && !mediaErrors[index] && (
+                                <Box
+                                    sx={{
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        width: '100%',
+                                        height: '100%',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                    }}
+                                >
+                                    <CircularProgress sx={{ color: COLORS.accent }} size={24} />
+                                </Box>
+                            )}
+                            {mediaErrors[index] && (
+                                <Box
+                                    sx={{
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        width: '100%',
+                                        height: '100%',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        color: COLORS.textSecondary,
+                                        fontSize: '12px',
+                                        textAlign: 'center',
+                                        bgcolor: 'rgba(0, 0, 0, 0.5)',
+                                    }}
+                                >
+                                    Не вдалося завантажити
+                                </Box>
+                            )}
+                            {mediaLoaded[index] && !mediaErrors[index] && (
+                                isVideo ? (
+                                    <video
+                                        src={mediaUrl}
+                                        controls
+                                        style={{
+                                            position: 'absolute',
+                                            top: 0,
+                                            left: 0,
+                                            width: '100%',
+                                            height: '100%',
+                                            objectFit: 'cover',
+                                            borderRadius: '8px',
+                                        }}
+                                    />
+                                ) : (
+                                    <img
+                                        src={mediaUrl}
+                                        alt={`Media ${index}`}
+                                        style={{
+                                            position: 'absolute',
+                                            top: '0',
+                                            left: '0',
+                                            width: '100%',
+                                            height: '100%',
+                                            objectFit: 'cover',
+                                            borderRadius: '8px',
+                                        }}
+                                    />
+                                ))}
+                        </Box>
                     </Grid>
                 );
             })}
@@ -113,8 +203,9 @@ const MediaPreview = ({ attachments, isMobile }) => {
                 <Grid item xs={4}>
                     <Box
                         sx={{
+                            position: 'relative',
                             width: '100%',
-                            height: '100px',
+                            paddingBottom: '100%',
                             borderRadius: '8px',
                             border: `1px solid ${COLORS.border}`,
                             bgcolor: 'rgba(255, 255, 255, 0.05)',
@@ -133,13 +224,83 @@ const MediaPreview = ({ attachments, isMobile }) => {
     );
 };
 
+const FullScreenMediaDialog = ({ open, onClose, media, blobUrls }) => {
+    if (!media) return null;
+    const isVideo = media.type.startsWith('video');
+    const mediaUrl = blobUrls[media.url] || '';
+
+    return (
+        <Dialog
+            open={open}
+            onClose={onClose}
+            maxWidth={false}
+            sx={{
+                '& .MuiDialog-paper': {
+                    background: 'rgba(0, 0, 0, 0.9)',
+                    width: '100%',
+                    height: '100%',
+                    margin: '0',
+                    maxWidth: 'none',
+                    maxHeight: 'none',
+                    borderRadius: '0',
+                },
+            }}
+        >
+            <IconButton
+                onClick={onClose}
+                sx={{
+                    position: 'absolute',
+                    top: 16,
+                    right: 16,
+                    color: COLORS.textPrimary,
+                    zIndex: 1,
+                    '&:hover': { color: COLORS.accent },
+                }}
+            >
+                <Close />
+            </IconButton>
+            <DialogContent
+                sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: 0,
+                    height: '100%',
+                    width: '100%',
+                }}
+            >
+                {isVideo ? (
+                    <video
+                        src={mediaUrl}
+                        controls
+                        autoPlay
+                        style={{
+                            maxWidth: '100%',
+                            maxHeight: '100%',
+                            objectFit: 'contain',
+                        }}
+                    />
+                ) : (
+                    <img
+                        src={mediaUrl}
+                        alt="Full-screen media"
+                        style={{
+                            maxWidth: '100%',
+                            maxHeight: '100%',
+                            objectFit: 'contain',
+                        }}
+                    />
+                )}
+            </DialogContent>
+        </Dialog>
+    );
+};
+
 const DateDivider = ({ date }) => (
-    <Box sx={{ display: 'flex', alignItems: 'center', my: 2 }}>
-        <Divider sx={{ flexGrow: 1, borderColor: COLORS.dateDivider }} />
+    <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}>
         <Typography
             variant="caption"
             sx={{
-                mx: 2,
                 color: COLORS.textSecondary,
                 fontSize: '12px',
                 fontWeight: 500,
@@ -151,7 +312,6 @@ const DateDivider = ({ date }) => (
                 day: 'numeric',
             })}
         </Typography>
-        <Divider sx={{ flexGrow: 1, borderColor: COLORS.dateDivider }} />
     </Box>
 );
 
@@ -164,9 +324,15 @@ const Message = ({ message, chatId, id, previousMessage, nextMessage }) => {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editContent, setEditContent] = useState(message.content);
     const [isHovered, setIsHovered] = useState(false);
+    const [blobUrls, setBlobUrls] = useState({});
+    const blobUrlsRef = useRef({});
+    const [mediaLoaded, setMediaLoaded] = useState((message.attachments || []).map(() => false));
+    const [mediaErrors, setMediaErrors] = useState((message.attachments || []).map(() => false));
+    const [fullScreenMedia, setFullScreenMedia] = useState(null);
 
-    // Debug: Log message content length
-    console.log('Message content length:', { id: message.id, length: message.content?.length || 0 });
+    const isSingleMedia = !message.content || message.content === '<p><br></p>'
+        ? (normalizeAttachments(message.attachments) || []).length === 1
+        : false;
 
     const showDateDivider = () => {
         if (!previousMessage) return true;
@@ -175,16 +341,87 @@ const Message = ({ message, chatId, id, previousMessage, nextMessage }) => {
         return prevDate !== currentDate;
     };
 
+    useEffect(() => {
+        if (!Array.isArray(message.attachments) || message.attachments.length === 0) return;
+
+        const media = message.attachments[0]?.temp
+            ? message.attachments
+            : normalizeAttachments(message.attachments) || [];
+
+        if (media.length === 0) return;
+
+        const fetchPrivateMedia = async () => {
+            const newBlobUrls = {};
+            const newMediaLoaded = [...mediaLoaded];
+            const newMediaErrors = [...mediaErrors];
+
+            for (const [index, item] of media.entries()) {
+
+                if (item.temp || item.url.startsWith('blob:')) {
+
+                    newBlobUrls[item.url] = item.url;
+                    newMediaLoaded[index] = true;
+                    newMediaErrors[index] = false;
+                } else {
+                    try {
+                        const response = await window.axios.get(`${STORAGE_PRIVATE_CHAT_URL}${item.url}`, {
+                            headers: {
+                                'Accept': 'application/octet-stream',
+                            },
+                            responseType: 'blob',
+                        });
+
+                        const blob = response.data;
+                        const blobUrl = URL.createObjectURL(blob);
+                        newBlobUrls[item.url] = blobUrl;
+                        blobUrlsRef.current[item.url] = blobUrl;
+                        newMediaLoaded[index] = true;
+                        newMediaErrors[index] = false;
+                    } catch (error) {
+                        newMediaErrors[index] = true;
+                        if (error.response?.status === 401 || error.response?.status === 403) {
+                            toast.error('Немає доступу до медіа. Увійдіть або перевірте права.');
+                        }
+                    }
+                }
+            }
+            setBlobUrls(newBlobUrls);
+            setMediaLoaded(newMediaLoaded);
+            setMediaErrors(newMediaErrors);
+        };
+
+        fetchPrivateMedia();
+
+        return () => {
+            Object.values(blobUrlsRef.current).forEach(url => {
+                if (!url.startsWith('blob:')) {
+                    URL.revokeObjectURL(url);
+                }
+            });
+            blobUrlsRef.current = {};
+            setBlobUrls({});
+        };
+    }, [message.attachments, message.isPending]);
+
     const editMessageMutation = useMutation(
         (payload) => messageActions.updateMessage(message.id, payload),
         {
             onSuccess: (response) => {
                 const updatedMessage = response.data.message;
                 queryClient.setQueryData(['messages', chatId], (oldData) => {
-                    if (!oldData || !Array.isArray(oldData)) return oldData;
-                    return oldData.map((m) =>
-                        m.id === message.id ? { ...m, content: updatedMessage.content } : m
-                    );
+                    if (!oldData) return oldData;
+                    return {
+                        ...oldData,
+                        pages: oldData.pages.map(page => ({
+                            ...page,
+                            data: {
+                                ...page.data,
+                                data: page.data.data.map(m =>
+                                    m.id === message.id ? { ...m, content: updatedMessage.content } : m
+                                ),
+                            },
+                        })),
+                    };
                 });
                 setEditContent(updatedMessage.content);
                 setIsEditModalOpen(false);
@@ -201,8 +438,17 @@ const Message = ({ message, chatId, id, previousMessage, nextMessage }) => {
         {
             onSuccess: () => {
                 queryClient.setQueryData(['messages', chatId], (oldData) => {
-                    if (!oldData || !Array.isArray(oldData)) return oldData;
-                    return oldData.filter((m) => m.id !== message.id);
+                    if (!oldData) return oldData;
+                    return {
+                        ...oldData,
+                        pages: oldData.pages.map(page => ({
+                            ...page,
+                            data: {
+                                ...page.data,
+                                data: page.data.data.filter(m => m.id !== message.id),
+                            },
+                        })),
+                    };
                 });
                 toast.success('Повідомлення видалено');
             },
@@ -217,10 +463,21 @@ const Message = ({ message, chatId, id, previousMessage, nextMessage }) => {
         {
             onSuccess: (response) => {
                 queryClient.setQueryData(['messages', chatId], (oldData) => {
-                    if (!oldData || !Array.isArray(oldData)) return oldData;
-                    return oldData.map((m) =>
-                        m.id === message.id ? { ...response.data, isPending: false, isError: false } : m
-                    );
+                    if (!oldData) return oldData;
+                    return {
+                        ...oldData,
+                        pages: oldData.pages.map(page => ({
+                            ...page,
+                            data: {
+                                ...page.data,
+                                data: page.data.data.map(m =>
+                                    m.id === message.id
+                                        ? { ...response.data.data, isPending: false, isError: false }
+                                        : m
+                                ),
+                            },
+                        })),
+                    };
                 });
                 toast.success('Повідомлення надіслано');
             },
@@ -253,12 +510,24 @@ const Message = ({ message, chatId, id, previousMessage, nextMessage }) => {
 
     const handleRetry = () => {
         const formData = new FormData();
-        formData.append('content', message.content);
+        formData.append('content', message.content || '');
         formData.append('chat_id', chatId);
-        message.attachments.forEach((attachment, index) => {
-            formData.append(`attachments[${index}]`, attachment.url);
-        });
+
+        if (message.attachments && message.attachments.length > 0) {
+            message.attachments.forEach((attachment, index) => {
+                formData.append(`attachments[${index}]`, attachment.file);
+            });
+        }
+
         retryMessageMutation.mutate(formData);
+    };
+
+    const handleMediaClick = (media, index) => {
+        setFullScreenMedia({ media, index });
+    };
+
+    const handleFullScreenClose = () => {
+        setFullScreenMedia(null);
     };
 
     const displayName = message.user.first_name && message.user.last_name
@@ -292,7 +561,7 @@ const Message = ({ message, chatId, id, previousMessage, nextMessage }) => {
                         flexDirection: isOwnMessage ? 'row-reverse' : 'row',
                         alignItems: 'flex-start',
                         gap: 1,
-                        maxWidth: isMobile ? '90%' : '50%',
+                        maxWidth: isMobile ? '95%' : '60%',
                         width: '100%',
                     }}
                 >
@@ -321,16 +590,16 @@ const Message = ({ message, chatId, id, previousMessage, nextMessage }) => {
                                 borderRadius: isOwnMessage
                                     ? '12px 0 12px 12px'
                                     : '0 12px 12px 12px',
-                                p: 1.5,
-                                paddingBottom: '4px',
+                                p: isSingleMedia ? 0.5 : 1.5,
+                                paddingBottom: isSingleMedia ? 0.5 : '4px',
                                 backdropFilter: 'blur(10px)',
                                 border: message.isError
                                     ? `1px solid ${COLORS.error}`
                                     : `1px solid ${COLORS.border}`,
                                 boxShadow: '0 2px 10px rgba(0, 0, 0, 0.3)',
                                 opacity: message.isPending ? 0.6 : 1,
-                                minWidth: '120px',
-                                maxWidth: { xs: '90%', sm: '600px' }, // Added maxWidth
+                                minWidth: '150px',
+                                maxWidth: { xs: '95%', sm: '650px' },
                                 ml: isOwnMessage ? 0 : '12px',
                                 mr: isOwnMessage ? '12px' : 0,
                             }}
@@ -338,16 +607,17 @@ const Message = ({ message, chatId, id, previousMessage, nextMessage }) => {
                             <Typography
                                 variant="caption"
                                 sx={{
+                                    margin: isSingleMedia ? 0.5 : 0,
                                     color: COLORS.textSecondary,
                                     fontSize: '12px',
                                     fontWeight: 500,
-                                    mb: 0.5,
+                                    mb: isSingleMedia ? 0 : 0.5,
                                     display: 'block',
                                 }}
                             >
                                 {displayName}
                             </Typography>
-                            {message.content && (
+                            {message.content && message.content !== '<p><br></p>' && (
                                 <Typography
                                     sx={{
                                         color: COLORS.textPrimary,
@@ -374,8 +644,19 @@ const Message = ({ message, chatId, id, previousMessage, nextMessage }) => {
                                 />
                             )}
                             <MediaPreview
-                                attachments={message.attachments || []}
+                                attachments={
+                                    !Array.isArray(message?.attachments) || message.attachments.length === 0
+                                        ? []
+                                        : message.attachments[0]?.temp
+                                            ? message.attachments
+                                            : normalizeAttachments(message.attachments) || []
+                                }
                                 isMobile={isMobile}
+                                blobUrls={blobUrls}
+                                mediaLoaded={mediaLoaded}
+                                mediaErrors={mediaErrors}
+                                onMediaClick={handleMediaClick}
+                                isSingleMedia={isSingleMedia}
                             />
                             {message.isError && (
                                 <Button
@@ -400,39 +681,23 @@ const Message = ({ message, chatId, id, previousMessage, nextMessage }) => {
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: isOwnMessage ? 'flex-start' : 'flex-end',
-                                    mt: 1,
-                                    gap: 0.5,
+                                    mt: isSingleMedia ? 0.5 : 1,
+                                    gap: 0.25,
                                 }}
                             >
                                 {isOwnMessage ? (
                                     <>
                                         <AnimatePresence>
-                                            {message.is_read ? (
-                                                <>
-                                                    <motion.div
-                                                        initial={{ opacity: 0, x: -5 }}
-                                                        animate={{ opacity: 1, x: 0 }}
-                                                        transition={{ delay: 0.1, duration: 0.3 }}
-                                                    >
-                                                        <Check sx={{ color: COLORS.accent, fontSize: 16 }} />
-                                                    </motion.div>
-                                                    <motion.div
-                                                        initial={{ opacity: 0, x: -5 }}
-                                                        animate={{ opacity: 1, x: 0 }}
-                                                        transition={{ duration: 0.3 }}
-                                                    >
-                                                        <Check sx={{ color: COLORS.accent, fontSize: 16, ml: -0.5 }} />
-                                                    </motion.div>
-                                                </>
-                                            ) : (
-                                                <motion.div
-                                                    initial={{ opacity: 0 }}
-                                                    animate={{ opacity: 1 }}
-                                                    transition={{ duration: 0.3 }}
-                                                >
-                                                    <Check sx={{ color: COLORS.textSecondary, fontSize: 16 }} />
-                                                </motion.div>
-                                            )}
+                                            <motion.div
+                                                initial={{ opacity: 0, x: -5 }}
+                                                animate={{ opacity: 1, x: 0 }}
+                                                transition={{ duration: 0.3 }}
+                                            >
+                                                <DoubleCheckIcon
+                                                    color={message.is_read ? COLORS.accent : COLORS.textSecondary}
+                                                    fontSize={16}
+                                                />
+                                            </motion.div>
                                         </AnimatePresence>
                                         <Typography
                                             variant="caption"
@@ -456,32 +721,16 @@ const Message = ({ message, chatId, id, previousMessage, nextMessage }) => {
                                             {formatTime(message.created_at)}
                                         </Typography>
                                         <AnimatePresence>
-                                            {message.is_read ? (
-                                                <>
-                                                    <motion.div
-                                                        initial={{ opacity: 0, x: 5 }}
-                                                        animate={{ opacity: 1, x: 0 }}
-                                                        transition={{ delay: 0.1, duration: 0.3 }}
-                                                    >
-                                                        <Check sx={{ color: COLORS.accent, fontSize: 16 }} />
-                                                    </motion.div>
-                                                    <motion.div
-                                                        initial={{ opacity: 0, x: 5 }}
-                                                        animate={{ opacity: 1, x: 0 }}
-                                                        transition={{ duration: 0.3 }}
-                                                    >
-                                                        <Check sx={{ color: COLORS.accent, fontSize: 16, ml: -0.5 }} />
-                                                    </motion.div>
-                                                </>
-                                            ) : (
-                                                <motion.div
-                                                    initial={{ opacity: 0 }}
-                                                    animate={{ opacity: 1 }}
-                                                    transition={{ duration: 0.3 }}
-                                                >
-                                                    <Check sx={{ color: COLORS.textSecondary, fontSize: 16 }} />
-                                                </motion.div>
-                                            )}
+                                            <motion.div
+                                                initial={{ opacity: 0, x: 5 }}
+                                                animate={{ opacity: 1, x: 0 }}
+                                                transition={{ duration: 0.3 }}
+                                            >
+                                                <DoubleCheckIcon
+                                                    color={message.is_read ? COLORS.accent : COLORS.textSecondary}
+                                                    fontSize={16}
+                                                />
+                                            </motion.div>
                                         </AnimatePresence>
                                     </>
                                 )}
@@ -569,7 +818,7 @@ const Message = ({ message, chatId, id, previousMessage, nextMessage }) => {
                         <Button
                             variant="contained"
                             onClick={handleEditSave}
-                            disabled={editMessageMutation.isLoading || !editContent.trim() || editContent === '<p><br></p>'}
+                            disabled={editMessageMutation.isLoading || !editContent?.trim() || editContent === '<p><br></p>'}
                             sx={{
                                 bgcolor: COLORS.accent,
                                 '&:hover': { bgcolor: '#7b1fa2', boxShadow: '0 0 10px rgba(156, 39, 176, 0.5)' },
@@ -596,6 +845,12 @@ const Message = ({ message, chatId, id, previousMessage, nextMessage }) => {
                     </Box>
                 </DialogContent>
             </Dialog>
+            <FullScreenMediaDialog
+                open={!!fullScreenMedia}
+                onClose={handleFullScreenClose}
+                media={fullScreenMedia?.media}
+                blobUrls={blobUrls}
+            />
         </>
     );
 };

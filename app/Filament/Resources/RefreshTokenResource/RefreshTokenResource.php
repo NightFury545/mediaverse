@@ -15,25 +15,26 @@ class RefreshTokenResource extends Resource
     protected static ?string $model = RefreshToken::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-key';
-    protected static ?string $navigationGroup = 'Security';
+    protected static ?string $navigationGroup = 'Безпека';
+    protected static ?string $navigationLabel = 'Рефреш токени';
 
     public static function form(Forms\Form $form): Forms\Form
     {
         return $form
             ->schema([
                 Select::make('user_id')
-                    ->label('User')
+                    ->label('Користувач')
                     ->options(fn () => User::pluck('username', 'id'))
                     ->searchable()
                     ->required(),
 
                 TextInput::make('token')
-                    ->label('Token')
+                    ->label('Токен')
                     ->required()
                     ->maxLength(255),
 
                 DateTimePicker::make('expires_at')
-                    ->label('Expiration Time')
+                    ->label('Термін придатності')
                     ->required(),
             ]);
     }

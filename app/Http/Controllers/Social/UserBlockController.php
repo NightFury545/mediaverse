@@ -59,8 +59,7 @@ class UserBlockController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
-            $perPage = $request->get('perPage', 20);
-            $blocks = $this->userBlockService->getUserBlocks($perPage);
+            $blocks = $this->userBlockService->getUserBlocks();
 
             return response()->json($blocks);
         } catch (Exception $e) {

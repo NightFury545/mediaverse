@@ -2,11 +2,11 @@ import React from 'react';
 import { Box, Typography, IconButton } from '@mui/material';
 import { motion } from 'framer-motion';
 import {Link, useNavigate} from 'react-router-dom';
-import {Favorite, Comment, Notifications, Delete} from '@mui/icons-material';
+import {Favorite, Comment, Notifications, Delete, GroupAdd, GroupRemove } from '@mui/icons-material';
 import { formatDate } from '@/utils/formatDate.js';
 import parse from 'html-react-parser';
 
-const NotificationCard = ({ notification, onDelete }) => {
+const NotificationCard = ({ notification, onDelete, onClose }) => {
     const navigate = useNavigate();
 
     const handleDelete = (e) => {
@@ -17,6 +17,8 @@ const NotificationCard = ({ notification, onDelete }) => {
     const iconMap = {
         like: Favorite,
         comment: Comment,
+        friend_removed: GroupRemove,
+        friend_add: GroupAdd,
     };
 
     const getIcon = (type) => {
@@ -54,7 +56,10 @@ const NotificationCard = ({ notification, onDelete }) => {
                                     >
                                         <Link
                                             to={href}
-                                            onClick={(e) => e.stopPropagation()}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onClose();
+                                            }}
                                             sx={{
                                                 color: isUserLink
                                                     ? '#ff4081'
@@ -88,7 +93,6 @@ const NotificationCard = ({ notification, onDelete }) => {
                 </Typography>
             );
         } catch (error) {
-            console.error('Помилка парсингу повідомлення:', error);
             return (
                 <Typography
                     sx={{

@@ -28,7 +28,7 @@ export const OnlineUsersProvider = ({ children }) => {
 
         const handleBeforeUnload = () => {
             if (isAuthenticated) {
-                navigator.sendBeacon(userStatusUrls.setOffline());
+                userStatusActions.setUserOffline();
             }
         };
 

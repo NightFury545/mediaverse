@@ -2,6 +2,7 @@ import React from 'react';
 import {Avatar, Box, Button, Card, CardContent, CircularProgress, Tab, Tabs, Typography} from '@mui/material';
 import {motion} from 'framer-motion';
 import PostCard from '@/Components/Social/PostCard.jsx';
+import UserCard from "@/Components/Social/UserCard.jsx";
 
 const ProfileTabs = ({
                          activeTab,
@@ -100,44 +101,45 @@ const ProfileTabs = ({
                 <Box
                     sx={{
                         display: 'grid',
-                        gridTemplateColumns: {xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr'},
+                        gridTemplateColumns: {
+                            xs: '1fr', // Одна картка на всю ширину на мобільних
+                            sm: '1fr', // Одна картка на sm, щоб вмістити ширшу карточку
+                            md: '1fr 1fr', // Дві картки на md і більше
+                        },
                         gap: 2,
-                        maxWidth: {xs: '100%', sm: '90%', md: '700px'},
-                        mx: 'auto',
+                        maxWidth: { xs: '100%', sm: '90%', md: '900px' }, // Збільшено maxWidth для ширших карточок
+                        mx: 'auto', // Центрування контейнера
                         p: 2,
+                        justifyContent: 'center', // Центрування елементів у сітці
                     }}
                 >
                     {friendsData?.length > 0 ? (
                         friendsData.map((friend) => (
                             <motion.div
                                 key={friend.id}
-                                initial={{opacity: 0, scale: 0.95}}
-                                animate={{opacity: 1, scale: 1}}
-                                transition={{duration: 0.3}}
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ duration: 0.3 }}
+                                sx={{ display: 'flex', justifyContent: 'center' }}
                             >
-                                <Card
+                                <UserCard
+                                    user={friend}
                                     sx={{
                                         bgcolor: 'rgba(20, 20, 30, 0.5)',
-                                        border: '1px solid rgba(156, 39, 176, 0.3)',
-                                        cursor: 'pointer',
-                                        '&:hover': {bgcolor: 'rgba(156, 39, 176, 0.1)', transform: 'translateY(-2px)'},
+                                        width: { xs: '100%', sm: '90%', md: '400px' },
+                                        maxWidth: '400px',
+                                        '&:hover': {
+                                            bgcolor: 'rgba(156, 39, 176, 0.1)',
+                                            transform: 'translateY(-2px)',
+                                        },
                                         transition: 'all 0.3s',
+                                        mx: 'auto',
                                     }}
-                                    onClick={() => navigate(`/profile/${friend.username}`)}
-                                >
-                                    <CardContent sx={{display: 'flex', alignItems: 'center', gap: 2}}>
-                                        <Avatar
-                                            src={friend.avatar}
-                                            alt={friend.username}
-                                            sx={{width: 40, height: 40}}
-                                        />
-                                        <Typography sx={{color: '#e0e0e0'}}>{friend.username}</Typography>
-                                    </CardContent>
-                                </Card>
+                                />
                             </motion.div>
                         ))
                     ) : (
-                        <Typography sx={{color: '#b0b0b0', textAlign: 'center', py: 2}}>
+                        <Typography sx={{ color: '#b0b0b0', textAlign: 'center', py: 2 }}>
                             Немає друзів
                         </Typography>
                     )}

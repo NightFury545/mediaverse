@@ -9,7 +9,7 @@ use Filament\Widgets\ChartWidget;
 
 class MediaStatsWidget extends ChartWidget
 {
-    protected static ?string $heading = 'Media Statistics';
+    protected static ?string $heading = 'Медіастатистика';
 
     protected function getData(): array
     {
@@ -25,7 +25,7 @@ class MediaStatsWidget extends ChartWidget
                     'backgroundColor' => ['#3498db', '#e74c3c', '#2ecc71'],
                 ],
             ],
-            'labels' => ['Posts', 'Likes', 'Comments'],
+            'labels' => ['Пости', 'Лайки', 'Коментарі'],
         ];
     }
 

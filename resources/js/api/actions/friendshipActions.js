@@ -1,8 +1,8 @@
 import { friendshipUrls } from '@/api/urls';
 
 const sendFriendRequest = (payload) => window.axios.post(friendshipUrls.send, payload);
-const acceptFriendRequest = (friendshipId) => window.axios.put(friendshipUrls.accept(friendshipId));
-const rejectFriendRequest = (friendshipId) => window.axios.put(friendshipUrls.reject(friendshipId));
+const acceptFriendRequest = (friendshipId) => window.axios.post(friendshipUrls.accept(friendshipId));
+const rejectFriendRequest = (friendshipId) => window.axios.post(friendshipUrls.reject(friendshipId));
 const cancelFriendRequest = (friendshipId) => window.axios.delete(friendshipUrls.cancel(friendshipId));
 const removeFriend = (friendshipId) => window.axios.delete(friendshipUrls.remove(friendshipId));
 
